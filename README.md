@@ -7,23 +7,36 @@ The goal of this repository is to make it easier for researchers, students, and 
 ## Usage
 Each paper summary is located in a separate directory, labeled with the name of the paper. Within each directory, you will find a markdown file named "summary.md" that provides a brief overview of the paper's content, methodology, and conclusions. The summaries are written in a concise and clear manner, making it easy to understand the main points of the paper.
 
-## Contribution Guidelines
-We welcome contributions from anyone who wishes to add a paper summary to this repository. To contribute, please follow these guidelines:
+## Installation
 
-Make sure the paper you want to add is relevant to the repository's topic and has not already been summarized.
+1. Install the required packages:
 
-Create a new directory with the name of the paper.
+pip install -r requirements.txt
 
-Write a summary of the paper in markdown format and save it as "summary.md" within the directory you created.
 
-Include a reference to the original paper at the end of the summary, using the following format:
+2. Clone this repository:
 
-css
-Copy code
-[Author(s) name(s)](Link to paper). Title of paper. Conference/Journal, Year.
-Create a pull request with your changes.
+git clone https://github.com/username/research-paper-scraper.git
 
-Please note that all contributions will be reviewed before being merged into the repository.
+
+3. Navigate to the cloned repository:
+
+cd research-paper-scraper
+
+
+## Usage
+
+To run the script, use the following command:
+
+
+The script will scrape research papers from the specified website and print summaries of the papers to the console.
+
+## Customization
+
+You can customize the script by modifying the following variables at the top of the `scraper.py` file:
+
+- `WEBSITE`: the URL of the website to scrape
+- `NUM_SENTENCES`: the number of sentences to include in each summary
 
 ## Disclaimer
 The summaries provided in this repository are intended to provide a brief overview of the papers and are not a substitute for reading the original documents. The accuracy and completeness of the information presented cannot be guaranteed, and readers are encouraged to consult the original papers for further details.
