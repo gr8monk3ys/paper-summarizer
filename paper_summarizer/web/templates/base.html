@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Paper Summarizer{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block styles %}{% endblock %}
+</head>
+<body class="bg-gray-50 font-['Inter']">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo and Brand -->
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="text-xl font-semibold text-gray-900">Paper Summarizer</span>
+                    </a>
+                </div>
+                
+                <!-- Navigation Links -->
+                <div class="hidden md:flex md:items-center md:space-x-6">
+                    <a href="/" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-150 {% if request.endpoint == 'main.index' %}text-blue-600{% endif %}">
+                        Summarize
+                    </a>
+                    <a href="/library" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-150 {% if request.endpoint == 'main.library' %}text-blue-600{% endif %}">
+                        Library
+                    </a>
+                    <a href="/batch" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-150 {% if request.endpoint == 'main.batch' %}text-blue-600{% endif %}">
+                        Batch Process
+                    </a>
+                    <a href="/analytics" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-150 {% if request.endpoint == 'main.analytics' %}text-blue-600{% endif %}">
+                        Analytics
+                    </a>
+                    <a href="/settings" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-150 {% if request.endpoint == 'main.settings' %}text-blue-600{% endif %}">
+                        Settings
+                    </a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <div class="flex items-center md:hidden">
+                    <button type="button" onclick="toggleMobileMenu()" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="hidden md:hidden">
+                <div class="pt-2 pb-3 space-y-1">
+                    <a href="/" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 {% if request.endpoint == 'main.index' %}text-blue-600 bg-blue-50{% endif %}">
+                        Summarize
+                    </a>
+                    <a href="/library" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 {% if request.endpoint == 'main.library' %}text-blue-600 bg-blue-50{% endif %}">
+                        Library
+                    </a>
+                    <a href="/batch" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 {% if request.endpoint == 'main.batch' %}text-blue-600 bg-blue-50{% endif %}">
+                        Batch Process
+                    </a>
+                    <a href="/analytics" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 {% if request.endpoint == 'main.analytics' %}text-blue-600 bg-blue-50{% endif %}">
+                        Analytics
+                    </a>
+                    <a href="/settings" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 {% if request.endpoint == 'main.settings' %}text-blue-600 bg-blue-50{% endif %}">
+                        Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex justify-between items-center">
+                <p class="text-sm text-gray-500"> 2025 Paper Summarizer. All rights reserved.</p>
+                <div class="flex space-x-6">
+                    <a href="/privacy" class="text-sm text-gray-500 hover:text-gray-900">Privacy Policy</a>
+                    <a href="/terms" class="text-sm text-gray-500 hover:text-gray-900">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script>
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobileMenu');
+        const button = document.querySelector('[aria-expanded]');
+        const isExpanded = menu.classList.contains('hidden');
+        menu.classList.toggle('hidden');
+        button.setAttribute('aria-expanded', isExpanded);
+    }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
