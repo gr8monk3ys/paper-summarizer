@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    env_file:
+      - .env
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+
+  # Development service with hot reload
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: flask run --host=0.0.0.0 --port=5000 --reload
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - uploads:/app/uploads
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    env_file:
+      - .env
+    profiles:
+      - dev
+
+volumes:
+  uploads:
