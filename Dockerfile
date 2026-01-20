@@ -8,23 +8,20 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry==1.8.2
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock* ./
-
-# Configure Poetry to not create a virtual environment
-RUN poetry config virtualenvs.create false
+COPY pyproject.toml uv.lock* ./
 
 # Install dependencies
-RUN poetry install --no-interaction --no-ansi --no-root --only main
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code
 COPY . .
 
 # Install the project
-RUN poetry install --no-interaction --no-ansi --only main
+RUN uv sync --frozen --no-dev
 
 # Create uploads directory
 RUN mkdir -p uploads
@@ -36,4 +33,4 @@ EXPOSE 5000
 HEALTHCHECK CMD curl --fail http://localhost:5000/health || exit 1
 
 # Run Flask
-CMD ["python", "run.py"]
+CMD ["uv", "run", "python", "run.py"]
