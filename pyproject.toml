@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 flask = ">=2.0.0"
-nltk = "^3.8.0"
+nltk = "^3.9.2"
 sumy = "^0.11.0"
 beautifulsoup4 = ">=4.9.3"
 requests = ">=2.25.0"
