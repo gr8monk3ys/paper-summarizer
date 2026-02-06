@@ -7,15 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
-import nltk
-from transformers import pipeline
 import together
-
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
 
 class ModelType(Enum):
     """Available model types."""
@@ -51,6 +43,7 @@ class PaperSummarizer:
         # Initialize local model if using local provider
         if provider == ModelProvider.LOCAL:
             try:
+                from transformers import pipeline
                 self.model = pipeline('summarization', model=model_type.value)
             except Exception as e:
                 self.logger.error(f"Failed to initialize local model: {str(e)}")
@@ -114,12 +107,13 @@ class PaperSummarizer:
             self.logger.error(f"Failed to fetch content from URL {url}: {str(e)}")
             raise ValueError(f"Failed to fetch content from URL {url}: {str(e)}")
 
-    def summarize_from_file(self, file_path: str, num_sentences: int = 5) -> str:
+    def summarize_from_file(self, file_path: str, num_sentences: int = 5, keep_citations: bool = True) -> str:
         """Summarize text from a file.
         
         Args:
             file_path: Path to the file
             num_sentences: Number of sentences in the summary
+            keep_citations: Whether to keep citations in the summary
             
         Returns:
             Summarized text
@@ -139,7 +133,7 @@ class PaperSummarizer:
             with open(file_path, 'r', encoding='utf-8') as f:
                 text = f.read()
                 
-            return self.summarize(text, num_sentences)
+            return self.summarize(text, num_sentences, keep_citations)
             
         except FileNotFoundError:
             self.logger.error(f"File not found: {file_path}")
