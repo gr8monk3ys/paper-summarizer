@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Library - Paper Summarizer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="section-title">Summary Library</h1>
+    
+    <!-- Search and Filter -->
+    <div class="mb-6">
+        <input type="text" id="search" placeholder="Search summaries..." 
+               class="form-input">
+    </div>
+    
+    <!-- Summary List -->
+    <div class="grid gap-6" id="summaryList">
+        <!-- Summary cards will be populated dynamically -->
+    </div>
+    
+    <!-- Empty State -->
+    <div id="emptyState" class="text-center py-12 hidden">
+        <p class="text-gray-500">No summaries found. Start by summarizing some papers!</p>
+        <a href="/" class="submit-button mt-4 inline-block">
+            Create Summary
+        </a>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="{{ request.url_for('static', path='library.js') }}" defer></script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Process - Paper Summarizer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <header class="text-center mb-12">
+        <h1 class="hero-title">Batch Processing</h1>
+        <p class="hero-subtitle">Process multiple papers at once and keep a structured archive.</p>
+    </header>
+
+    <div class="max-w-4xl mx-auto">
+        <div class="panel-shell">
+            <form id="batch-form" class="space-y-6">
+                <div class="form-group">
+                    <label for="files" class="block text-sm font-medium text-gray-200 mb-2">Upload Papers</label>
+                    <input type="file" id="files" name="files[]" multiple accept=".pdf,.txt,.docx" required
+                           class="form-file-input">
+                    <p class="mt-2 text-sm text-gray-500">Upload multiple papers (PDF, TXT, or DOCX)</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="num_sentences" class="block text-sm font-medium text-gray-200 mb-2">Number of Sentences</label>
+                    <input type="number" id="num_sentences" name="num_sentences" min="1" max="10" value="5" required
+                           class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Options</label>
+                    <div class="space-y-2">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="keep_citations" class="form-checkbox">
+                            <span class="ml-2">Keep Citations</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="submit-button">
+                        Process Files
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="spinner hidden"></div>
+
+        <!-- Error Message -->
+        <div class="error-message" id="error-message"></div>
+
+        <!-- Results -->
+        <div id="batch-results" class="hidden mt-8 space-y-6">
+            <h2 class="section-title">Results</h2>
+            <div id="results-list" class="space-y-4"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ request.url_for('static', path='batch.js') }}" defer></script>
+{% endblock %}

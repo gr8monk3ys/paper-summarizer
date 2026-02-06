@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Paper Summarizer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="section-title">Analytics</h1>
+    
+    <!-- Summary Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="summary-card">
+            <h3 class="text-lg font-semibold mb-2">Total Summaries</h3>
+            <p class="text-3xl font-bold text-orange-300" id="totalSummaries">0</p>
+        </div>
+        <div class="summary-card">
+            <h3 class="text-lg font-semibold mb-2">Average Length</h3>
+            <p class="text-3xl font-bold text-green-300" id="avgLength">0</p>
+        </div>
+        <div class="summary-card">
+            <h3 class="text-lg font-semibold mb-2">Models Used</h3>
+            <p class="text-3xl font-bold text-blue-300" id="modelsUsed">0</p>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Model Usage Chart -->
+        <div class="summary-card">
+            <h3 class="text-lg font-semibold mb-4">Model Usage</h3>
+            <canvas id="modelUsageChart"></canvas>
+        </div>
+        
+        <!-- Summary Length Distribution -->
+        <div class="summary-card">
+            <h3 class="text-lg font-semibold mb-4">Summary Length Distribution</h3>
+            <canvas id="lengthDistChart"></canvas>
+        </div>
+        
+        <!-- Daily Activity -->
+        <div class="summary-card col-span-1 md:col-span-2">
+            <h3 class="text-lg font-semibold mb-4">Daily Activity</h3>
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="{{ request.url_for('static', path='analytics.js') }}" defer></script>
+{% endblock %}
+{% endblock %}
