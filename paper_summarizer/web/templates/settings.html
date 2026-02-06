@@ -4,29 +4,38 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">Settings</h1>
+    <h1 class="section-title">Settings</h1>
     
     <div class="max-w-3xl mx-auto">
+        <div class="panel-shell mb-6">
+            <h2 class="text-xl font-semibold mb-2">Quick Start</h2>
+            <p class="text-sm text-gray-400 mb-4">Configure the basics so summaries are consistent across sessions.</p>
+            <ul class="space-y-2 text-sm text-gray-300">
+                <li>1. Choose a default model for new summaries.</li>
+                <li>2. Add a Together AI key to unlock cloud models.</li>
+                <li>3. Set your preferred summary length and citation handling.</li>
+            </ul>
+        </div>
         <!-- Model Settings -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div class="panel-shell mb-6">
             <h2 class="text-xl font-semibold mb-4">Model Settings</h2>
             
             <div class="space-y-4">
                 <!-- Default Model -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Default Model</label>
-                    <select id="defaultModel" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Default Model</label>
+                    <select id="defaultModel" class="form-input">
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
                 
                 <!-- API Key -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Together AI API Key</label>
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Together AI API Key</label>
                     <div class="flex">
                         <input type="password" id="apiKey" placeholder="Enter your API key" 
-                               class="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button onclick="toggleApiKey()" class="px-4 py-2 bg-gray-100 border border-l-0 rounded-r-lg hover:bg-gray-200">
+                               class="form-input rounded-r-none">
+                        <button id="toggleApiKeyButton" class="px-4 py-2 bg-gray-800 border border-l-0 rounded-r-lg hover:bg-gray-700">
                             Show
                         </button>
                     </div>
@@ -36,13 +45,13 @@
         </div>
         
         <!-- Summarization Settings -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div class="panel-shell mb-6">
             <h2 class="text-xl font-semibold mb-4">Summarization Settings</h2>
             
             <div class="space-y-4">
                 <!-- Default Summary Length -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Default Summary Length</label>
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Default Summary Length</label>
                     <div class="flex items-center space-x-2">
                         <input type="range" id="summaryLength" min="1" max="20" value="5" 
                                class="flex-1">
@@ -52,7 +61,7 @@
                 
                 <!-- Citation Handling -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Citation Handling</label>
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Citation Handling</label>
                     <div class="space-y-2">
                         <label class="flex items-center">
                             <input type="radio" name="citations" value="keep" class="mr-2">
@@ -68,34 +77,34 @@
         </div>
         
         <!-- Storage Settings -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div class="panel-shell mb-6">
             <h2 class="text-xl font-semibold mb-4">Storage Settings</h2>
             
             <div class="space-y-4">
                 <!-- Auto-save -->
                 <div class="flex items-center justify-between">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Auto-save Summaries</label>
+                        <label class="block text-sm font-medium text-gray-200">Auto-save Summaries</label>
                         <p class="text-sm text-gray-500">Automatically save all generated summaries</p>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="autoSave" class="sr-only peer" checked>
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                     </label>
                 </div>
                 
                 <!-- Storage Usage -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Storage Usage</label>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div class="bg-blue-500 h-2.5 rounded-full" style="width: 45%"></div>
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Storage Usage</label>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                        <div class="bg-orange-500 h-2.5 rounded-full" style="width: 45%"></div>
                     </div>
                     <p class="text-sm text-gray-500 mt-1">450MB used of 1GB</p>
                 </div>
                 
                 <!-- Clear Data -->
                 <div>
-                    <button onclick="confirmClearData()" 
+                    <button id="clearDataButton" 
                             class="text-red-500 hover:text-red-700 text-sm font-medium">
                         Clear All Saved Summaries
                     </button>
@@ -105,8 +114,8 @@
         
         <!-- Save Button -->
         <div class="text-right">
-            <button onclick="saveSettings()" 
-                    class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+            <button id="saveSettingsButton" 
+                    class="submit-button">
                 Save Settings
             </button>
         </div>
@@ -114,134 +123,6 @@
 </div>
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Load available models
-    loadModels();
-    
-    // Load current settings
-    loadSettings();
-    
-    // Setup summary length slider
-    setupSlider();
-});
-
-async function loadModels() {
-    try {
-        const response = await fetch('/models');
-        const data = await response.json();
-        
-        const select = document.getElementById('defaultModel');
-        Object.entries(data).forEach(([provider, models]) => {
-            const group = document.createElement('optgroup');
-            group.label = provider === 'together_ai' ? 'Cloud Models' : 'Local Models';
-            
-            models.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model.id;
-                option.text = `${model.name} - ${model.description}`;
-                group.appendChild(option);
-            });
-            
-            select.appendChild(group);
-        });
-    } catch (error) {
-        console.error('Failed to load models:', error);
-    }
-}
-
-async function loadSettings() {
-    try {
-        const response = await fetch('/api/settings');
-        const settings = await response.json();
-        
-        // Apply settings to form
-        document.getElementById('defaultModel').value = settings.defaultModel;
-        document.getElementById('apiKey').value = settings.apiKey || '';
-        document.getElementById('summaryLength').value = settings.summaryLength;
-        document.getElementById('summaryLengthValue').textContent = `${settings.summaryLength} sentences`;
-        document.querySelector(`input[name="citations"][value="${settings.citationHandling}"]`).checked = true;
-        document.getElementById('autoSave').checked = settings.autoSave;
-        
-    } catch (error) {
-        console.error('Failed to load settings:', error);
-    }
-}
-
-function setupSlider() {
-    const slider = document.getElementById('summaryLength');
-    const value = document.getElementById('summaryLengthValue');
-    
-    slider.addEventListener('input', function() {
-        value.textContent = `${this.value} sentences`;
-    });
-}
-
-function toggleApiKey() {
-    const input = document.getElementById('apiKey');
-    const button = input.nextElementSibling;
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        button.textContent = 'Hide';
-    } else {
-        input.type = 'password';
-        button.textContent = 'Show';
-    }
-}
-
-async function saveSettings() {
-    const settings = {
-        defaultModel: document.getElementById('defaultModel').value,
-        apiKey: document.getElementById('apiKey').value,
-        summaryLength: parseInt(document.getElementById('summaryLength').value),
-        citationHandling: document.querySelector('input[name="citations"]:checked').value,
-        autoSave: document.getElementById('autoSave').checked
-    };
-    
-    try {
-        const response = await fetch('/api/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(settings)
-        });
-        
-        if (response.ok) {
-            // Show success message
-            alert('Settings saved successfully');
-        } else {
-            throw new Error('Failed to save settings');
-        }
-    } catch (error) {
-        console.error('Failed to save settings:', error);
-        alert('Failed to save settings. Please try again.');
-    }
-}
-
-function confirmClearData() {
-    if (confirm('Are you sure you want to clear all saved summaries? This action cannot be undone.')) {
-        clearData();
-    }
-}
-
-async function clearData() {
-    try {
-        const response = await fetch('/api/clear-data', {
-            method: 'POST'
-        });
-        
-        if (response.ok) {
-            alert('All data cleared successfully');
-        } else {
-            throw new Error('Failed to clear data');
-        }
-    } catch (error) {
-        console.error('Failed to clear data:', error);
-        alert('Failed to clear data. Please try again.');
-    }
-}
-</script>
+<script src="{{ request.url_for('static', path='settings.js') }}" defer></script>
 {% endblock %}
 {% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Synthesis - Paper Summarizer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="section-title">Synthesis Builder</h1>
+    <div class="panel-shell space-y-6">
+        <div>
+            <h2 class="text-lg font-semibold mb-2">Select Summaries</h2>
+            <p class="text-gray-500 mb-4">Pick multiple summaries to generate a consensus snapshot.</p>
+            <div id="summary-picker" class="space-y-3"></div>
+        </div>
+        <div class="flex justify-end">
+            <button class="submit-button" id="runSynthesisButton">Run Synthesis</button>
+        </div>
+        <div>
+            <h2 class="text-lg font-semibold mb-2">Consensus Output</h2>
+            <div id="synthesis-output" class="text-gray-500 synthesis-output"></div>
+            <div id="synthesis-disagreements" class="mt-3 text-gray-500"></div>
+            <div id="synthesis-citations" class="mt-3 text-gray-500"></div>
+            <div class="mt-3 flex gap-2">
+                <button class="submit-button" data-action="export" data-format="txt">Export TXT</button>
+                <button class="submit-button" data-action="export" data-format="md">Export MD</button>
+                <button class="submit-button" data-action="export" data-format="pdf">Export PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ request.url_for('static', path='synthesis.js') }}" defer></script>
+{% endblock %}
