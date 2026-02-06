@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: paper_summarizer
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:5000"]

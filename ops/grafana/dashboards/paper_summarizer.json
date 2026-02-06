@@ -1,0 +1,108 @@
+{
+  "uid": "paper-summarizer",
+  "title": "Paper Summarizer",
+  "tags": ["paper-summarizer"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Requests / Min",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(paper_summarizer_http_requests_total[1m])) * 60",
+          "refId": "A"
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "type": "stat",
+      "title": "P95 Latency (s)",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(paper_summarizer_http_request_duration_seconds_bucket[5m])) by (le))",
+          "refId": "A"
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "type": "stat",
+      "title": "5xx Error Rate",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(paper_summarizer_http_requests_total{status_code=~\"5..\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "type": "stat",
+      "title": "4xx Error Rate",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(paper_summarizer_http_requests_total{status_code=~\"4..\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by Status Code",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6},
+      "targets": [
+        {
+          "expr": "sum(rate(paper_summarizer_http_requests_total[1m])) by (status_code)",
+          "legendFormat": "{{status_code}}",
+          "refId": "A"
+        }
+      ],
+      "options": {"legend": {"showLegend": true}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Request Latency (p50/p95/p99)",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(paper_summarizer_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(paper_summarizer_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(paper_summarizer_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "options": {"legend": {"showLegend": true}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by Path",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+      "targets": [
+        {
+          "expr": "topk(10, sum(rate(paper_summarizer_http_requests_total[5m])) by (path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "options": {"legend": {"showLegend": true}}
+    }
+  ]
+}
