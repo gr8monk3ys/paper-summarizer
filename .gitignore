@@ -1,1 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.python-version
+.env
+.env.*
+uploads/
+data/
+*.log
+.DS_Store
+.pytest_cache/
+*.egg-info/
+dist/
+build/
 run.bat
