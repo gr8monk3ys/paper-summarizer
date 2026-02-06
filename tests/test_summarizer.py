@@ -14,6 +14,10 @@ class TestPaperSummarizer:
     @pytest.fixture
     def summarizer(self):
         """Create a test summarizer instance."""
+        try:
+            __import__("torch")
+        except Exception:
+            pytest.skip("torch is not available on this platform")
         return PaperSummarizer(model_type=ModelType.T5_SMALL, provider=ModelProvider.LOCAL)
 
     def test_initialization(self, summarizer):

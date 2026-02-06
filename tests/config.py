@@ -15,7 +15,9 @@ TEST_CONFIG = {
     'DEFAULT_PROVIDER': 'local',
     'DEFAULT_NUM_SENTENCES': 5,
     'MIN_SENTENCES': 1,
-    'MAX_SENTENCES': 10
+    'MAX_SENTENCES': 10,
+    'RATE_LIMIT_ENABLED': False,
+    'LOCAL_MODELS_ENABLED': True
 }
 
 # Sample test data
