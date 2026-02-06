@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Archive - Paper Summarizer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="section-title">Archive</h1>
+    <div class="panel-shell space-y-6">
+        <div>
+            <h2 class="text-lg font-semibold mb-2">Export Summaries</h2>
+            <p class="text-gray-500 mb-4">Download all saved summaries as JSON for backup or migration.</p>
+            <button class="submit-button" id="exportArchiveButton">Download JSON</button>
+        </div>
+        <div>
+            <h2 class="text-lg font-semibold mb-2">Import Summaries</h2>
+            <p class="text-gray-500 mb-4">Upload a JSON export to restore summaries.</p>
+            <input type="file" id="importFile" accept="application/json" class="form-file-input mb-3" />
+            <button class="submit-button" id="importArchiveButton">Import JSON</button>
+        </div>
+        <div id="archive-status" class="text-sm text-gray-500"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ request.url_for('static', path='archive.js') }}" defer></script>
+{% endblock %}

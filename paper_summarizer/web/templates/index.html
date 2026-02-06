@@ -5,33 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paper Summarizer</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='style.css') }}">
+    <script src="{{ request.url_for('static', path='auth.js') }}" defer></script>
+    <script src="{{ request.url_for('static', path='main.js') }}" defer></script>
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-    <nav class="bg-white shadow-lg">
+<body class="app-shell">
+    <nav class="nav-shell">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between h-16">
                 <div class="flex-shrink-0 flex items-center">
-                    <a href="{{ url_for('main.index') }}" class="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                    <a href="{{ request.url_for('index') }}" class="text-xl font-bold nav-title transition-colors">
                         Paper Summarizer
                     </a>
                 </div>
                 
                 <div class="hidden sm:flex sm:space-x-8">
-                    <a href="{{ url_for('main.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ 'border-blue-500 text-gray-900' if request.endpoint == 'main.index' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    <a href="{{ request.url_for('index') }}" class="nav-link {% if active_page == 'index' %}nav-link-active{% endif %}">
                         Summarize
                     </a>
-                    <a href="{{ url_for('main.library') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ 'border-blue-500 text-gray-900' if request.endpoint == 'main.library' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    <a href="{{ request.url_for('library') }}" class="nav-link {% if active_page == 'library' %}nav-link-active{% endif %}">
                         Library
                     </a>
-                    <a href="{{ url_for('main.batch') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ 'border-blue-500 text-gray-900' if request.endpoint == 'main.batch' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    <a href="{{ request.url_for('batch') }}" class="nav-link {% if active_page == 'batch' %}nav-link-active{% endif %}">
                         Batch Process
                     </a>
-                    <a href="{{ url_for('main.analytics') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ 'border-blue-500 text-gray-900' if request.endpoint == 'main.analytics' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    <a href="{{ request.url_for('analytics') }}" class="nav-link {% if active_page == 'analytics' %}nav-link-active{% endif %}">
                         Analytics
                     </a>
-                    <a href="{{ url_for('main.settings') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ 'border-blue-500 text-gray-900' if request.endpoint == 'main.settings' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    <a href="{{ request.url_for('synthesis') }}" class="nav-link {% if active_page == 'synthesis' %}nav-link-active{% endif %}">
+                        Synthesis
+                    </a>
+                    <a href="{{ request.url_for('archive') }}" class="nav-link {% if active_page == 'archive' %}nav-link-active{% endif %}">
+                        Archive
+                    </a>
+                    <a href="{{ request.url_for('settings') }}" class="nav-link {% if active_page == 'settings' %}nav-link-active{% endif %}">
                         Settings
                     </a>
                 </div>
@@ -49,19 +57,25 @@
 
         <div class="sm:hidden hidden" id="mobile-menu">
             <div class="pt-2 pb-3 space-y-1">
-                <a href="{{ url_for('main.index') }}" class="block pl-3 pr-4 py-2 border-l-4 text-base font-medium {{ 'bg-blue-50 border-blue-500 text-blue-700' if request.endpoint == 'main.index' else 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700' }}">
+                <a href="{{ request.url_for('index') }}" class="mobile-link {% if active_page == 'index' %}mobile-link-active{% endif %}">
                     Summarize
                 </a>
-                <a href="{{ url_for('main.library') }}" class="block pl-3 pr-4 py-2 border-l-4 text-base font-medium {{ 'bg-blue-50 border-blue-500 text-blue-700' if request.endpoint == 'main.library' else 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700' }}">
+                <a href="{{ request.url_for('library') }}" class="mobile-link {% if active_page == 'library' %}mobile-link-active{% endif %}">
                     Library
                 </a>
-                <a href="{{ url_for('main.batch') }}" class="block pl-3 pr-4 py-2 border-l-4 text-base font-medium {{ 'bg-blue-50 border-blue-500 text-blue-700' if request.endpoint == 'main.batch' else 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700' }}">
+                <a href="{{ request.url_for('batch') }}" class="mobile-link {% if active_page == 'batch' %}mobile-link-active{% endif %}">
                     Batch Process
                 </a>
-                <a href="{{ url_for('main.analytics') }}" class="block pl-3 pr-4 py-2 border-l-4 text-base font-medium {{ 'bg-blue-50 border-blue-500 text-blue-700' if request.endpoint == 'main.analytics' else 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700' }}">
+                <a href="{{ request.url_for('analytics') }}" class="mobile-link {% if active_page == 'analytics' %}mobile-link-active{% endif %}">
                     Analytics
                 </a>
-                <a href="{{ url_for('main.settings') }}" class="block pl-3 pr-4 py-2 border-l-4 text-base font-medium {{ 'bg-blue-50 border-blue-500 text-blue-700' if request.endpoint == 'main.settings' else 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700' }}">
+                <a href="{{ request.url_for('synthesis') }}" class="mobile-link {% if active_page == 'synthesis' %}mobile-link-active{% endif %}">
+                    Synthesis
+                </a>
+                <a href="{{ request.url_for('archive') }}" class="mobile-link {% if active_page == 'archive' %}mobile-link-active{% endif %}">
+                    Archive
+                </a>
+                <a href="{{ request.url_for('settings') }}" class="mobile-link {% if active_page == 'settings' %}mobile-link-active{% endif %}">
                     Settings
                 </a>
             </div>
@@ -69,29 +83,62 @@
     </nav>
 
     <div class="container mx-auto px-4 py-8">
-        <!-- Header Component -->
-        <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-800 mb-4 hover:text-blue-600 transition-colors">Paper Summarizer</h1>
-            <p class="text-gray-600 text-lg text-center">Get quick summaries of research papers</p>
+        <header class="hero-block">
+            <div>
+                <p class="hero-kicker">Research, but with receipts</p>
+                <h1 class="hero-title">Evidence-first paper summaries with synthesis, critique, and exports.</h1>
+                <p class="hero-subtitle">
+                    Move beyond generic chat summaries. Track citations, compare papers, and build a living research stack.
+                </p>
+            </div>
+            <div class="hero-metrics">
+                <div class="metric-card">
+                    <span class="metric-label">Evidence Links</span>
+                    <span class="metric-value">Claim → Quote</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Cross-Paper</span>
+                    <span class="metric-value">Consensus Map</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Method Critique</span>
+                    <span class="metric-value">Design Notes</span>
+                </div>
+            </div>
         </header>
+
+        <section class="feature-grid">
+            <div class="feature-card">
+                <h3>Claim-Evidence Map</h3>
+                <p>Every summary line links back to the paper, so you can audit fast.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Batch Synthesis</h3>
+                <p>Drop multiple papers, extract shared results, and highlight disagreements.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Critique Mode</h3>
+                <p>Auto-capture design, dataset, limitations, and missing baselines.</p>
+            </div>
+        </section>
 
         <div class="max-w-4xl mx-auto">
             <!-- Tab Navigation Component -->
             <nav class="mb-8 flex justify-center" aria-label="Tabs">
-                <div class="inline-flex space-x-2 bg-white p-1 rounded-lg shadow-sm">
-                    <button class="px-4 py-2 text-sm font-medium rounded-md tab-button active transition-all" data-target="url-input">URL</button>
-                    <button class="px-4 py-2 text-sm font-medium rounded-md tab-button transition-all" data-target="file-input">File Upload</button>
-                    <button class="px-4 py-2 text-sm font-medium rounded-md tab-button transition-all" data-target="text-input">Direct Text</button>
-                    <button class="px-4 py-2 text-sm font-medium rounded-md tab-button transition-all" data-target="history-view">History</button>
+                <div class="tab-shell">
+                    <button class="tab-button active" data-target="url-input">URL</button>
+                    <button class="tab-button" data-target="file-input">File Upload</button>
+                    <button class="tab-button" data-target="text-input">Direct Text</button>
+                    <button class="tab-button" data-target="history-view">History</button>
                 </div>
             </nav>
 
             <!-- Input Forms Container -->
-            <div class="bg-white rounded-xl shadow-lg p-6 transition-all hover:shadow-xl">
+            <div class="panel-shell">
                 <!-- URL Input Component -->
                 <form id="url-input" class="input-section space-y-4">
                     <div class="form-group">
-                        <label for="url" class="block text-sm font-medium text-gray-700 mb-2">Paper URL</label>
+                        <label for="url" class="block text-sm font-medium text-gray-200 mb-2">Paper URL</label>
                         <input type="url" id="url" name="url" required
                                class="form-input">
                     </div>
@@ -101,7 +148,7 @@
                 <!-- File Upload Component -->
                 <form id="file-input" class="input-section hidden space-y-4">
                     <div class="form-group">
-                        <label for="file" class="block text-sm font-medium text-gray-700 mb-2">Upload Paper</label>
+                        <label for="file" class="block text-sm font-medium text-gray-200 mb-2">Upload Paper</label>
                         <input type="file" id="file" name="file" accept=".pdf,.txt,.docx" required
                                class="form-file-input">
                     </div>
@@ -111,22 +158,22 @@
                 <!-- Text Input Component -->
                 <form id="text-input" class="input-section hidden space-y-4">
                     <div class="mb-4">
-                        <label for="model_type" class="block text-sm font-medium text-gray-700">Model Type</label>
-                        <select id="model_type" name="model_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <label for="model_type" class="block text-sm font-medium text-gray-200">Model Type</label>
+                        <select id="model_type" name="model_type" class="form-input">
                             <option value="t5-small">T5-Small</option>
                             <option value="deepseek-r1">DeepSeek-R1</option>
                         </select>
                     </div>
                     <div class="mb-4">
-                        <label for="provider" class="block text-sm font-medium text-gray-700">Provider</label>
-                        <select id="provider" name="provider" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <label for="provider" class="block text-sm font-medium text-gray-200">Provider</label>
+                        <select id="provider" name="provider" class="form-input">
                             <option value="local">Local</option>
                             <option value="together_ai">Together AI</option>
                         </select>
                     </div>
                     <div class="mb-4">
-                        <label for="text" class="block text-sm font-medium text-gray-700">Paper Text</label>
-                        <textarea id="text" name="text" rows="8" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-900" placeholder="Paste your paper text here..."></textarea>
+                        <label for="text" class="block text-sm font-medium text-gray-200">Paper Text</label>
+                        <textarea id="text" name="text" rows="8" class="form-textarea" placeholder="Paste your paper text here..."></textarea>
                     </div>
                     <div class="common-options"></div>
                 </form>
@@ -140,15 +187,15 @@
                 <template id="common-options-template">
                     <div class="space-y-4">
                         <div class="mb-4">
-                            <label for="num_sentences" class="block text-sm font-medium text-gray-900 mb-2">Number of Sentences</label>
+                            <label for="num_sentences" class="block text-sm font-medium text-gray-200 mb-2">Number of Sentences</label>
                             <input type="number" id="num_sentences" name="num_sentences" min="1" max="20" value="5"
-                                   class="block w-full px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                   class="form-input">
                             <p class="mt-1 text-sm text-gray-500">Choose how many sentences you want in the summary (1-20)</p>
                         </div>
                         <div class="flex items-center">
                             <input type="checkbox" name="keep_citations" id="keep_citations"
                                    class="form-checkbox">
-                            <label for="keep_citations" class="ml-2 text-sm text-gray-700">Keep Citations</label>
+                            <label for="keep_citations" class="ml-2 text-sm text-gray-200">Keep Citations</label>
                         </div>
                         <button type="submit" class="submit-button">
                             Summarize
@@ -164,146 +211,61 @@
             <div class="error-message" id="error-message"></div>
 
             <!-- Result Component -->
-            <div id="result" class="hidden mt-8 bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Summary</h2>
+            <div id="result" class="hidden mt-8 panel-shell">
+                <h2 class="section-title">Summary</h2>
                 <div class="prose max-w-none">
-                    <p id="summary" class="text-gray-700"></p>
+                    <p id="summary" class="text-gray-200"></p>
+                </div>
+                <div class="mt-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="section-title">Evidence Map</h3>
+                        <button class="submit-button" id="generateEvidenceButton">Generate Evidence</button>
+                    </div>
+                    <div class="mt-4 grid gap-3 md:grid-cols-3">
+                        <input id="evidence-claim" class="form-input" placeholder="Claim" />
+                        <input id="evidence-evidence" class="form-input" placeholder="Evidence snippet" />
+                        <input id="evidence-location" class="form-input" placeholder="Location (optional)" />
+                    </div>
+                    <div class="mt-3">
+                        <button class="submit-button" id="addEvidenceButton">Add Evidence</button>
+                    </div>
+                    <div id="evidence-list" class="mt-4 space-y-3">
+                        <p class="text-gray-500">No evidence items yet.</p>
+                    </div>
                 </div>
                 <div class="mt-4 flex justify-end">
-                    <button onclick="exportSummary()" class="export-button">
-                        Export
-                    </button>
+                    <div class="relative export-menu">
+                        <button id="exportMenuToggle" class="export-button">
+                            Export Options
+                        </button>
+                        <div id="export-menu" class="export-menu-panel hidden">
+                            <button data-action="export-summary" data-format="txt" class="export-menu-item">Export TXT</button>
+                            <button data-action="export-summary" data-format="md" class="export-menu-item">Export MD</button>
+                            <button data-action="export-summary" data-format="pdf" class="export-menu-item">Export PDF</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 panel-shell">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="section-title">Cross-Paper Synthesis</h2>
+                        <p class="text-gray-500">Select summaries from your library to generate a consensus view.</p>
+                    </div>
+                    <button class="submit-button" id="runSynthesisButton">Run Synthesis</button>
+                </div>
+                <div class="mt-4">
+                    <input id="synthesis-ids" type="text" class="form-input" placeholder="Enter summary IDs separated by commas" />
+                </div>
+                <div id="synthesis-output" class="mt-4 text-gray-500 synthesis-output"></div>
+                <div class="mt-3 flex gap-2">
+                    <button class="submit-button" data-action="export-synthesis" data-format="txt">Export TXT</button>
+                    <button class="submit-button" data-action="export-synthesis" data-format="md">Export MD</button>
+                    <button class="submit-button" data-action="export-synthesis" data-format="pdf">Export PDF</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        // Initialize common options
-        const commonOptionsTemplate = document.getElementById('common-options-template');
-        document.querySelectorAll('.common-options').forEach(container => {
-            container.appendChild(commonOptionsTemplate.content.cloneNode(true));
-        });
-
-        // Tab switching
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', () => {
-                // Update button states
-                document.querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.remove('bg-blue-100', 'text-blue-700', 'active');
-                    btn.classList.add('text-gray-500', 'hover:text-gray-700');
-                });
-                button.classList.add('bg-blue-100', 'text-blue-700', 'active');
-                button.classList.remove('text-gray-500', 'hover:text-gray-700');
-
-                // Show selected section
-                document.querySelectorAll('.input-section').forEach(section => {
-                    section.classList.add('hidden');
-                });
-                document.getElementById(button.dataset.target).classList.remove('hidden');
-
-                // Load history if selected
-                if (button.dataset.target === 'history-view') {
-                    loadHistory();
-                }
-            });
-        });
-
-        // Error handling function
-        function showError(message) {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        // Show/hide loading spinner
-        function setLoading(isLoading) {
-            const spinner = document.getElementById('loading-spinner');
-            const submitButtons = document.querySelectorAll('button[type="submit"]');
-            spinner.style.display = isLoading ? 'block' : 'none';
-            submitButtons.forEach(button => {
-                button.disabled = isLoading;
-            });
-        }
-
-        async function handleSubmit(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-            
-            try {
-                setLoading(true);
-                const response = await fetch('/summarize', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to generate summary');
-                }
-                
-                document.getElementById('summary').textContent = data.summary;
-                document.getElementById('result').classList.remove('hidden');
-            } catch (error) {
-                showError(error.message);
-                document.getElementById('result').classList.add('hidden');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // Add form submit handlers
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', handleSubmit);
-        });
-
-        // Export button handler
-        function exportSummary() {
-            const result = document.getElementById('result');
-            const entryId = result.dataset.entryId;
-            if (entryId) {
-                window.location.href = `/export/${entryId}`;
-            }
-        }
-
-        // History loading
-        async function loadHistory() {
-            const historyList = document.getElementById('history-list');
-            historyList.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>';
-            
-            try {
-                const response = await fetch('/history');
-                const history = await response.json();
-                
-                if (history.length === 0) {
-                    historyList.innerHTML = '<p class="text-gray-500 text-center">No summaries yet</p>';
-                    return;
-                }
-                
-                historyList.innerHTML = history.reverse().map(entry => `
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-sm text-gray-500">${new Date(entry.timestamp).toLocaleString()}</p>
-                                <p class="mt-1 text-sm text-gray-900">${entry.source}</p>
-                            </div>
-                            <a href="/export/${entry.id}" class="text-blue-600 hover:text-blue-800 text-sm">Export</a>
-                        </div>
-                        <p class="mt-2 text-gray-600">${entry.summary.substring(0, 200)}${entry.summary.length > 200 ? '...' : ''}</p>
-                    </div>
-                `).join('');
-            } catch (err) {
-                historyList.innerHTML = '<p class="text-red-500 text-center">Failed to load history</p>';
-            }
-        }
-
-        // Initialize active tab
-        document.querySelector('.tab-button.active').click();
-    </script>
 </body>
 </html>
