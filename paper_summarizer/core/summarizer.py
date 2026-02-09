@@ -45,7 +45,10 @@ class PaperSummarizer:
             try:
                 from transformers import pipeline
                 self.model = pipeline('summarization', model=model_type.value)
-            except Exception as e:
+            except ImportError as e:
+                self.logger.error(f"Failed to initialize local model: {str(e)}")
+                raise ValueError(f"Failed to initialize local model: {str(e)}")
+            except (OSError, RuntimeError) as e:
                 self.logger.error(f"Failed to initialize local model: {str(e)}")
                 raise ValueError(f"Failed to initialize local model: {str(e)}")
 
@@ -82,7 +85,9 @@ class PaperSummarizer:
 
             return summary.strip()
 
-        except Exception as e:
+        except ValueError:
+            raise
+        except RuntimeError as e:
             self.logger.error(f"Failed to summarize text: {str(e)}")
             raise ValueError(f"Failed to summarize text: {str(e)}")
 
@@ -100,12 +105,20 @@ class PaperSummarizer:
             ValueError: If URL is invalid or content cannot be fetched
         """
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=30)
             response.raise_for_status()
             return self.summarize(response.text, num_sentences)
-        except Exception as e:
+        except requests.Timeout as e:
+            self.logger.error(f"Request timed out for URL {url}: {str(e)}")
+            raise ValueError(f"Request timed out for URL {url}: {str(e)}")
+        except requests.ConnectionError as e:
+            self.logger.error(f"Connection failed for URL {url}: {str(e)}")
+            raise ValueError(f"Connection failed for URL {url}: {str(e)}")
+        except requests.RequestException as e:
             self.logger.error(f"Failed to fetch content from URL {url}: {str(e)}")
             raise ValueError(f"Failed to fetch content from URL {url}: {str(e)}")
+        except ValueError:
+            raise
 
     def summarize_from_file(self, file_path: str, num_sentences: int = 5, keep_citations: bool = True) -> str:
         """Summarize text from a file.
@@ -141,7 +154,7 @@ class PaperSummarizer:
         except ValueError as e:
             self.logger.error(f"Failed to read or summarize file {file_path}: {str(e)}")
             raise
-        except Exception as e:
+        except (IOError, OSError) as e:
             self.logger.error(f"Failed to read or summarize file {file_path}: {str(e)}")
             raise ValueError(f"Failed to read or summarize file {file_path}: {str(e)}")
 
@@ -160,7 +173,7 @@ class PaperSummarizer:
         try:
             result = self.model(text, max_length=150, min_length=50, do_sample=False)
             return result[0]['summary_text']
-        except Exception as e:
+        except (RuntimeError, IndexError, TypeError) as e:
             raise ValueError(f"Local summarization failed: {str(e)}")
 
     def _summarize_together_ai(self, text: str) -> str:
@@ -184,7 +197,9 @@ class PaperSummarizer:
                 temperature=0.3
             )
             return response['output']['choices'][0]['text'].strip()
-        except Exception as e:
+        except requests.RequestException as e:
+            raise ValueError(f"Together AI summarization failed: {str(e)}")
+        except (RuntimeError, KeyError, TypeError, IndexError) as e:
             raise ValueError(f"Together AI summarization failed: {str(e)}")
 
     def _remove_citations(self, text: str) -> str:

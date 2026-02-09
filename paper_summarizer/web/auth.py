@@ -6,33 +6,29 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
+from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 
-from .config import load_settings
-from .db import create_db_engine, get_session, init_db
+from .deps import _get_settings, _get_engine
+from .db import get_session
 from .models import User
+
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-
-def _get_settings(request: Request):
-    if not hasattr(request.app.state, "settings"):
-        settings = load_settings()
-        engine = create_db_engine(settings["DATABASE_URL"])
-        init_db(engine, reset=bool(settings.get("TESTING")))
-        request.app.state.settings = settings
-        request.app.state.engine = engine
-    return request.app.state.settings
-
-
-def _get_engine(request: Request):
-    _get_settings(request)
-    return request.app.state.engine
 
 
 def hash_password(password: str) -> str:
@@ -50,18 +46,13 @@ def create_access_token(subject: str, secret: str, expires_minutes: int) -> str:
 
 
 @router.post("/register")
-def register(request: Request, payload: dict):
-    email = payload.get("email")
-    password = payload.get("password")
-    if not email or not password:
-        raise HTTPException(status_code=400, detail="Email and password are required")
-
+def register(request: Request, payload: RegisterRequest) -> dict:
     engine = _get_engine(request)
     with get_session(engine) as session:
-        existing = session.exec(select(User).where(User.email == email)).first()
+        existing = session.exec(select(User).where(User.email == payload.email)).first()
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
-        user = User(email=email, hashed_password=hash_password(password))
+        user = User(email=payload.email, hashed_password=hash_password(payload.password))
         session.add(user)
         session.commit()
         session.refresh(user)
@@ -72,16 +63,11 @@ def register(request: Request, payload: dict):
 
 
 @router.post("/login")
-def login(request: Request, payload: dict):
-    email = payload.get("email")
-    password = payload.get("password")
-    if not email or not password:
-        raise HTTPException(status_code=400, detail="Email and password are required")
-
+def login(request: Request, payload: LoginRequest) -> dict:
     engine = _get_engine(request)
     with get_session(engine) as session:
-        user = session.exec(select(User).where(User.email == email)).first()
-        if not user or not verify_password(password, user.hashed_password):
+        user = session.exec(select(User).where(User.email == payload.email)).first()
+        if not user or not verify_password(payload.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
     settings = _get_settings(request)
@@ -94,7 +80,7 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> U
     try:
         payload = jwt.decode(token, settings["SECRET_KEY"], algorithms=["HS256"])
         user_id = payload.get("sub")
-    except Exception as exc:
+    except (JWTError, KeyError) as exc:
         raise HTTPException(status_code=401, detail="Invalid token") from exc
 
     if not user_id:

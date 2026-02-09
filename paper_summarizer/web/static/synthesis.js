@@ -11,15 +11,32 @@ async function loadSummaries() {
         return;
     }
 
-    container.innerHTML = data.summaries.map(item => `
-        <label class="summary-card flex items-start gap-3">
-            <input type="checkbox" value="${item.id}" class="form-checkbox mt-1" />
-            <div>
-                <div class="font-semibold">${item.title || 'Untitled Summary'}</div>
-                <div class="text-sm text-gray-500">ID: ${item.id}</div>
-            </div>
-        </label>
-    `).join('');
+    container.innerHTML = '';
+    data.summaries.forEach(item => {
+        const label = document.createElement('label');
+        label.className = 'summary-card flex items-start gap-3';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = item.id;
+        checkbox.className = 'form-checkbox mt-1';
+        label.appendChild(checkbox);
+
+        const div = document.createElement('div');
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'font-semibold';
+        titleDiv.textContent = item.title || 'Untitled Summary';
+        div.appendChild(titleDiv);
+
+        const idDiv = document.createElement('div');
+        idDiv.className = 'text-sm text-gray-500';
+        idDiv.textContent = 'ID: ' + item.id;
+        div.appendChild(idDiv);
+
+        label.appendChild(div);
+        container.appendChild(label);
+    });
 }
 
 async function runSynthesis() {
@@ -48,9 +65,13 @@ async function runSynthesis() {
         ? data.disagreements.join('\n')
         : 'No major disagreements detected.';
     if (data.citations && data.citations.length) {
-        citations.innerHTML = data.citations.map(item => `
-            <div class="text-sm">[${item.summary_id.slice(0, 8)}] ${item.title || 'Untitled'} — ${item.excerpt}</div>
-        `).join('');
+        citations.innerHTML = '';
+        data.citations.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'text-sm';
+            div.textContent = '[' + item.summary_id.slice(0, 8) + '] ' + (item.title || 'Untitled') + ' \u2014 ' + item.excerpt;
+            citations.appendChild(div);
+        });
     } else {
         citations.textContent = '';
     }

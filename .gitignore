@@ -5,11 +5,14 @@ __pycache__/
 .python-version
 .env
 .env.*
+!.env.example
 uploads/
 data/
 *.log
 .DS_Store
 .pytest_cache/
+.coverage
+htmlcov/
 *.egg-info/
 dist/
 build/
