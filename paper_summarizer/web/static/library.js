@@ -14,20 +14,56 @@ async function fetchSummaries() {
 
 function displaySummaries(summaries) {
     const list = document.getElementById('summaryList');
-    list.innerHTML = summaries.map(summary => `
-        <div class="summary-card">
-            <h2 class="text-xl font-semibold mb-2">${summary.title || 'Untitled Summary'}</h2>
-            <p class="mb-4">${summary.summary}</p>
-            <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-500">${new Date(summary.created_at).toLocaleDateString()}</span>
-                <div class="flex gap-2">
-                    <button data-action="download" data-id="${summary.id}" class="mr-2">Download</button>
-                    <button data-action="delete" data-id="${summary.id}" class="text-red-400 hover:text-red-300">Delete</button>
-                </div>
-            </div>
-            <p class="text-xs text-gray-500 mt-3">ID: ${summary.id}</p>
-        </div>
-    `).join('');
+    list.innerHTML = '';
+    summaries.forEach(summary => {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+
+        const h2 = document.createElement('h2');
+        h2.className = 'text-xl font-semibold mb-2';
+        h2.textContent = summary.title || 'Untitled Summary';
+        card.appendChild(h2);
+
+        const summaryP = document.createElement('p');
+        summaryP.className = 'mb-4';
+        summaryP.textContent = summary.summary;
+        card.appendChild(summaryP);
+
+        const flexDiv = document.createElement('div');
+        flexDiv.className = 'flex justify-between items-center';
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'text-sm text-gray-500';
+        dateSpan.textContent = new Date(summary.created_at).toLocaleDateString();
+        flexDiv.appendChild(dateSpan);
+
+        const buttonDiv = document.createElement('div');
+        buttonDiv.className = 'flex gap-2';
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.dataset.action = 'download';
+        downloadBtn.dataset.id = summary.id;
+        downloadBtn.className = 'mr-2';
+        downloadBtn.textContent = 'Download';
+        buttonDiv.appendChild(downloadBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.dataset.action = 'delete';
+        deleteBtn.dataset.id = summary.id;
+        deleteBtn.className = 'text-red-400 hover:text-red-300';
+        deleteBtn.textContent = 'Delete';
+        buttonDiv.appendChild(deleteBtn);
+
+        flexDiv.appendChild(buttonDiv);
+        card.appendChild(flexDiv);
+
+        const idP = document.createElement('p');
+        idP.className = 'text-xs text-gray-500 mt-3';
+        idP.textContent = 'ID: ' + summary.id;
+        card.appendChild(idP);
+
+        list.appendChild(card);
+    });
 }
 
 async function downloadSummary(id, format = 'txt') {

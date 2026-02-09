@@ -203,30 +203,99 @@ async function loadEvidence() {
         evidenceList.innerHTML = '<p class="text-gray-500">No evidence items yet.</p>';
         return;
     }
-    evidenceList.innerHTML = data.items.map(item => `
-        <div class="summary-card">
-            <div class="flex justify-between items-start gap-3">
-                <div class="flex-1">
-                    <h4 class="font-semibold mb-2">${item.claim}</h4>
-                    <p>${item.evidence}</p>
-                    ${item.location ? `<p class="text-xs text-gray-500 mt-2">${item.location}</p>` : ''}
-                </div>
-                <div class="flex gap-2">
-                    <button class="text-xs text-gray-400 hover:text-gray-200" data-action="edit" data-id="${item.id}">Edit</button>
-                    <button class="text-xs text-red-400 hover:text-red-300" data-action="delete" data-id="${item.id}">Delete</button>
-                </div>
-            </div>
-            <div id="evidence-edit-${item.id}" class="hidden mt-3 space-y-2">
-                <input class="form-input" id="claim-${item.id}" value="${item.claim}" />
-                <input class="form-input" id="evidence-${item.id}" value="${item.evidence}" />
-                <input class="form-input" id="location-${item.id}" value="${item.location || ''}" />
-                <div class="flex gap-2">
-                    <button class="submit-button" data-action="save" data-id="${item.id}">Save</button>
-                    <button class="submit-button" data-action="cancel" data-id="${item.id}">Cancel</button>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    evidenceList.innerHTML = '';
+    data.items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+
+        const flexOuter = document.createElement('div');
+        flexOuter.className = 'flex justify-between items-start gap-3';
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'flex-1';
+
+        const claimH4 = document.createElement('h4');
+        claimH4.className = 'font-semibold mb-2';
+        claimH4.textContent = item.claim;
+        contentDiv.appendChild(claimH4);
+
+        const evidenceP = document.createElement('p');
+        evidenceP.textContent = item.evidence;
+        contentDiv.appendChild(evidenceP);
+
+        if (item.location) {
+            const locationP = document.createElement('p');
+            locationP.className = 'text-xs text-gray-500 mt-2';
+            locationP.textContent = item.location;
+            contentDiv.appendChild(locationP);
+        }
+
+        flexOuter.appendChild(contentDiv);
+
+        const actionDiv = document.createElement('div');
+        actionDiv.className = 'flex gap-2';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'text-xs text-gray-400 hover:text-gray-200';
+        editBtn.dataset.action = 'edit';
+        editBtn.dataset.id = item.id;
+        editBtn.textContent = 'Edit';
+        actionDiv.appendChild(editBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'text-xs text-red-400 hover:text-red-300';
+        deleteBtn.dataset.action = 'delete';
+        deleteBtn.dataset.id = item.id;
+        deleteBtn.textContent = 'Delete';
+        actionDiv.appendChild(deleteBtn);
+
+        flexOuter.appendChild(actionDiv);
+        card.appendChild(flexOuter);
+
+        const editDiv = document.createElement('div');
+        editDiv.id = 'evidence-edit-' + item.id;
+        editDiv.className = 'hidden mt-3 space-y-2';
+
+        const claimInput = document.createElement('input');
+        claimInput.className = 'form-input';
+        claimInput.id = 'claim-' + item.id;
+        claimInput.value = item.claim;
+        editDiv.appendChild(claimInput);
+
+        const evidenceInput = document.createElement('input');
+        evidenceInput.className = 'form-input';
+        evidenceInput.id = 'evidence-' + item.id;
+        evidenceInput.value = item.evidence;
+        editDiv.appendChild(evidenceInput);
+
+        const locationInput = document.createElement('input');
+        locationInput.className = 'form-input';
+        locationInput.id = 'location-' + item.id;
+        locationInput.value = item.location || '';
+        editDiv.appendChild(locationInput);
+
+        const editActionDiv = document.createElement('div');
+        editActionDiv.className = 'flex gap-2';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'submit-button';
+        saveBtn.dataset.action = 'save';
+        saveBtn.dataset.id = item.id;
+        saveBtn.textContent = 'Save';
+        editActionDiv.appendChild(saveBtn);
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'submit-button';
+        cancelBtn.dataset.action = 'cancel';
+        cancelBtn.dataset.id = item.id;
+        cancelBtn.textContent = 'Cancel';
+        editActionDiv.appendChild(cancelBtn);
+
+        editDiv.appendChild(editActionDiv);
+        card.appendChild(editDiv);
+
+        evidenceList.appendChild(card);
+    });
 }
 
 async function generateEvidence() {
@@ -405,10 +474,16 @@ async function loadHistory() {
         data.summaries.slice(0, 5).forEach(summary => {
             const card = document.createElement('div');
             card.className = 'summary-card';
-            card.innerHTML = `
-                <h3 class="font-semibold mb-2">${summary.title || 'Untitled Summary'}</h3>
-                <p>${summary.summary}</p>
-            `;
+
+            const h3 = document.createElement('h3');
+            h3.className = 'font-semibold mb-2';
+            h3.textContent = summary.title || 'Untitled Summary';
+            card.appendChild(h3);
+
+            const p = document.createElement('p');
+            p.textContent = summary.summary;
+            card.appendChild(p);
+
             historyList.appendChild(card);
         });
     } catch (error) {
