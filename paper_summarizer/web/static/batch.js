@@ -31,10 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
             data.summaries.forEach(result => {
                 const resultDiv = document.createElement('div');
                 resultDiv.className = 'summary-card';
-                resultDiv.innerHTML = `
-                    <h3 class="font-semibold mb-2">${result.filename}</h3>
-                    <p>${result.summary}</p>
-                `;
+
+                const h3 = document.createElement('h3');
+                h3.className = 'font-semibold mb-2';
+                h3.textContent = result.filename;
+                resultDiv.appendChild(h3);
+
+                const p = document.createElement('p');
+                p.textContent = result.summary;
+                resultDiv.appendChild(p);
+
                 resultsList.appendChild(resultDiv);
             });
 
