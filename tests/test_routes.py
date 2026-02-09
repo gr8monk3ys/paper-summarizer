@@ -9,21 +9,24 @@ from tests.config import TEST_DATA
 @pytest.fixture
 def mock_summarizer():
     """Mock PaperSummarizer instance."""
-    with patch('paper_summarizer.web.routes.PaperSummarizer') as mock:
-        mock_instance = Mock()
-        mock_instance.summarize.return_value = TEST_DATA['sample_summary']
-        mock_instance.summarize_from_url.return_value = TEST_DATA['sample_summary']
-        mock_instance.summarize_from_file.return_value = TEST_DATA['sample_summary']
-        mock_instance.get_available_models.return_value = {
-            "together_ai": [
-                {"id": "deepseek-r1", "name": "DeepSeek R1", "description": "High-quality model"}
-            ],
-            "local": [
-                {"id": "t5-small", "name": "T5 Small", "description": "Fast local model"}
-            ]
-        }
-        mock.return_value = mock_instance
-        yield mock
+    mock_instance = Mock()
+    mock_instance.summarize.return_value = TEST_DATA['sample_summary']
+    mock_instance.summarize_from_url.return_value = TEST_DATA['sample_summary']
+    mock_instance.summarize_from_file.return_value = TEST_DATA['sample_summary']
+    mock_instance.get_available_models.return_value = {
+        "together_ai": [
+            {"id": "deepseek-r1", "name": "DeepSeek R1", "description": "High-quality model"}
+        ],
+        "local": [
+            {"id": "t5-small", "name": "T5 Small", "description": "Fast local model"}
+        ]
+    }
+    with patch('paper_summarizer.web.routes.summaries.PaperSummarizer') as mock_summaries, \
+         patch('paper_summarizer.web.routes.html.PaperSummarizer') as mock_html, \
+         patch('paper_summarizer.web.routes.jobs.PaperSummarizer') as mock_jobs:
+        for m in (mock_summaries, mock_html, mock_jobs):
+            m.return_value = mock_instance
+        yield mock_summaries
 
 class TestRoutes:
     """Test cases for web routes."""
@@ -51,7 +54,8 @@ class TestRoutes:
             'model_type': ModelType.DEEPSEEK_R1.value,
             'provider': ModelProvider.TOGETHER_AI.value
         }
-        response = client.post('/summarize', data=data, headers=auth_headers)
+        with patch('paper_summarizer.web.routes.summaries.validate_url'):
+            response = client.post('/summarize', data=data, headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data['summary'] == TEST_DATA['sample_summary']

@@ -7,11 +7,26 @@ from pathlib import Path
 
 
 APP_ENV = os.getenv("APP_ENV", "development")
+
+
+def _resolve_secret_key() -> str:
+    """Return the SECRET_KEY, raising in non-development environments if unset."""
+    secret = os.getenv("SECRET_KEY")
+    if secret:
+        return secret
+    if APP_ENV == "development":
+        return "dev-secret-change-me"
+    raise RuntimeError(
+        "SECRET_KEY environment variable is required when APP_ENV "
+        f"is '{APP_ENV}' (i.e. not 'development'). Set it before starting the server."
+    )
+
+
 DEFAULT_SETTINGS = {
     "APP_ENV": APP_ENV,
     "UPLOAD_FOLDER": Path(os.getenv("UPLOAD_FOLDER", "uploads")),
     "DATABASE_URL": os.getenv("DATABASE_URL", "sqlite:///data/paper_summarizer.db"),
-    "SECRET_KEY": os.getenv("SECRET_KEY", "dev-secret-change-me"),
+    "SECRET_KEY": _resolve_secret_key(),
     "ACCESS_TOKEN_EXPIRE_MINUTES": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")),
     "AUTO_CREATE_DB": os.getenv("AUTO_CREATE_DB", "true" if APP_ENV != "production" else "false").lower() == "true",
     "MAX_CONTENT_LENGTH": 16 * 1024 * 1024,

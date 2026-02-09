@@ -24,7 +24,9 @@ jobs:
 
       - name: Run black
         run: uv run black --check .
-        continue-on-error: true
+
+      - name: Run mypy
+        run: uv run mypy paper_summarizer/
 
   test:
     name: Test
@@ -44,4 +46,3 @@ jobs:
 
       - name: Run tests
         run: uv run pytest -v --tb=short
-        continue-on-error: true

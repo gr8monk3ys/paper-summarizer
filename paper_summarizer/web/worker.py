@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+
 from paper_summarizer.core.summarizer import ModelProvider, ModelType, PaperSummarizer
 from paper_summarizer.web.config import load_settings
 from paper_summarizer.web.db import create_db_engine, get_session
@@ -92,7 +95,25 @@ async def run_summary_job(ctx, job_id: str) -> None:
                 job.completed_at = summary_record.created_at
                 session.add(job)
                 session.commit()
-    except Exception as exc:  # pragma: no cover
+    except (ValueError, KeyError, TypeError) as exc:  # pragma: no cover
+        with get_session(engine) as session:
+            job = session.get(Job, job_id)
+            if job:
+                job.status = "failed"
+                job.error = str(exc)
+                job.completed_at = datetime.now(timezone.utc)
+                session.add(job)
+                session.commit()
+    except HTTPException as exc:  # pragma: no cover
+        with get_session(engine) as session:
+            job = session.get(Job, job_id)
+            if job:
+                job.status = "failed"
+                job.error = exc.detail
+                job.completed_at = datetime.now(timezone.utc)
+                session.add(job)
+                session.commit()
+    except (SQLAlchemyError, OSError, RuntimeError) as exc:  # pragma: no cover
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:

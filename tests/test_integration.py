@@ -45,7 +45,8 @@ class TestIntegration:
 
     def test_summarize_from_url(self, client, auth_headers):
         """Test summarization from URL."""
-        with patch('paper_summarizer.core.summarizer.PaperSummarizer.summarize_from_url') as mock_summarize:
+        with patch('paper_summarizer.core.summarizer.PaperSummarizer.summarize_from_url') as mock_summarize, \
+             patch('paper_summarizer.web.routes.summaries.validate_url'):
             mock_summarize.return_value = TEST_DATA['sample_summary']
 
             data = {
