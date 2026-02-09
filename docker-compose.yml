@@ -1,4 +1,8 @@
-version: '3.8'
+# Local development compose — Railway handles services independently.
+# Usage:
+#   docker compose up              → app + worker + redis
+#   docker compose --profile dev up → dev (hot reload) + worker + redis
+#   docker compose --profile observability up → + prometheus + grafana
 
 services:
   app:
@@ -10,7 +14,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - APP_ENV=production
+      - APP_ENV=development
       - LOCAL_MODELS_ENABLED=false
       - DEFAULT_PROVIDER=together_ai
       - REDIS_URL=redis://redis:6379/0
@@ -23,14 +27,13 @@ services:
     depends_on:
       - redis
 
-  # Development service with hot reload
   dev:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         LOCAL_MODELS: ${LOCAL_MODELS:-false}
-    command: uvicorn paper_summarizer.web.app:app --host=0.0.0.0 --port=5000 --reload
+    command: uv run uvicorn paper_summarizer.web.app:app --host=0.0.0.0 --port=5000 --reload
     ports:
       - "5000:5000"
     volumes:
@@ -53,7 +56,7 @@ services:
       dockerfile: Dockerfile
       args:
         LOCAL_MODELS: ${LOCAL_MODELS:-false}
-    command: arq paper_summarizer.web.worker.WorkerSettings
+    command: uv run arq paper_summarizer.web.worker.WorkerSettings
     env_file:
       - .env
     environment:
@@ -89,7 +92,7 @@ services:
     profiles:
       - observability
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./ops/grafana/dashboards:/etc/grafana/dashboards:ro
