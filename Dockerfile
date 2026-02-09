@@ -39,11 +39,12 @@ RUN if [ "$LOCAL_MODELS" = "true" ]; then \
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Expose app port
-EXPOSE 5000
+# Railway injects PORT at runtime; default to 5000 for local dev
+ENV PORT=5000
+EXPOSE ${PORT}
 
 # Health check
-HEALTHCHECK CMD curl --fail http://localhost:5000/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:${PORT}/health || exit 1
 
-# Run FastAPI
-CMD ["uv", "run", "uvicorn", "paper_summarizer.web.app:app", "--host", "0.0.0.0", "--port", "5000"]
+# Run FastAPI — uses shell form so $PORT is expanded at runtime
+CMD uv run uvicorn paper_summarizer.web.app:app --host 0.0.0.0 --port $PORT

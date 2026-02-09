@@ -113,16 +113,7 @@ async def run_summary_job(ctx, job_id: str) -> None:
                 job.completed_at = datetime.now(timezone.utc)
                 session.add(job)
                 session.commit()
-    except SQLAlchemyError as exc:  # pragma: no cover
-        with get_session(engine) as session:
-            job = session.get(Job, job_id)
-            if job:
-                job.status = "failed"
-                job.error = str(exc)
-                job.completed_at = datetime.now(timezone.utc)
-                session.add(job)
-                session.commit()
-    except Exception as exc:  # pragma: no cover
+    except (SQLAlchemyError, OSError, RuntimeError) as exc:  # pragma: no cover
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
