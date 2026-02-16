@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -56,12 +57,26 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
 
     app = FastAPI(title="Paper Summarizer", lifespan=lifespan)
 
+    allowed_origins = [
+        o.strip()
+        for o in str(settings.get("CORS_ALLOWED_ORIGINS", "")).split(",")
+        if o.strip()
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
     limiter = RateLimiter(
         RateLimitConfig(
             requests=int(settings.get("RATE_LIMIT_PER_MINUTE", 60)),
             window_seconds=int(settings.get("RATE_LIMIT_WINDOW_SECONDS", 60)),
             enabled=bool(settings.get("RATE_LIMIT_ENABLED", True)),
-        )
+        ),
+        redis_url=str(settings.get("REDIS_URL", "")).strip(),
     )
     app.add_middleware(RateLimitMiddleware, limiter=limiter, exempt_paths=("/static", "/health", "/metrics"))
     app.add_middleware(RequestLoggingMiddleware, logger=logger)

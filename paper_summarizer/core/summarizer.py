@@ -2,7 +2,7 @@
 
 import os
 import logging
-import requests
+import httpx
 from enum import Enum
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -105,16 +105,20 @@ class PaperSummarizer:
             ValueError: If URL is invalid or content cannot be fetched
         """
         try:
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
+            with httpx.Client(timeout=30) as client:
+                response = client.get(url)
+                response.raise_for_status()
             return self.summarize(response.text, num_sentences)
-        except requests.Timeout as e:
+        except httpx.TimeoutException as e:
             self.logger.error(f"Request timed out for URL {url}: {str(e)}")
             raise ValueError(f"Request timed out for URL {url}: {str(e)}")
-        except requests.ConnectionError as e:
+        except httpx.ConnectError as e:
             self.logger.error(f"Connection failed for URL {url}: {str(e)}")
             raise ValueError(f"Connection failed for URL {url}: {str(e)}")
-        except requests.RequestException as e:
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"Failed to fetch content from URL {url}: {str(e)}")
+            raise ValueError(f"Failed to fetch content from URL {url}: {str(e)}")
+        except httpx.HTTPError as e:
             self.logger.error(f"Failed to fetch content from URL {url}: {str(e)}")
             raise ValueError(f"Failed to fetch content from URL {url}: {str(e)}")
         except ValueError:
@@ -197,7 +201,7 @@ class PaperSummarizer:
                 temperature=0.3
             )
             return response['output']['choices'][0]['text'].strip()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             raise ValueError(f"Together AI summarization failed: {str(e)}")
         except (RuntimeError, KeyError, TypeError, IndexError) as e:
             raise ValueError(f"Together AI summarization failed: {str(e)}")

@@ -70,7 +70,7 @@ def create_evidence(
         )
         session.add(record)
         session.commit()
-    return list_evidence(summary_id, request)
+    return list_evidence(summary_id, request, current_user)
 
 
 @router.put(
@@ -97,7 +97,7 @@ def update_evidence(
             record.location = payload.location
         session.add(record)
         session.commit()
-    return list_evidence(summary_id, request)
+    return list_evidence(summary_id, request, current_user)
 
 
 @router.delete(
@@ -116,7 +116,7 @@ def delete_evidence(summary_id: str, evidence_id: str, request: Request, current
             raise HTTPException(status_code=404, detail="Evidence not found")
         session.delete(record)
         session.commit()
-    return list_evidence(summary_id, request)
+    return list_evidence(summary_id, request, current_user)
 
 
 @router.post(
@@ -145,4 +145,4 @@ def generate_evidence(summary_id: str, request: Request, current_user: User = De
             )
         session.commit()
 
-    return list_evidence(summary_id, request)
+    return list_evidence(summary_id, request, current_user)
