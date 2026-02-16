@@ -44,6 +44,7 @@ DEFAULT_SETTINGS = {
     "SENTRY_DSN": os.getenv("SENTRY_DSN", ""),
     "METRICS_ENABLED": os.getenv("METRICS_ENABLED", "true").lower() == "true",
     "LOCAL_MODELS_ENABLED": os.getenv("LOCAL_MODELS_ENABLED", "true" if APP_ENV != "production" else "false").lower() == "true",
+    "CORS_ALLOWED_ORIGINS": os.getenv("CORS_ALLOWED_ORIGINS", ""),
 }
 
 

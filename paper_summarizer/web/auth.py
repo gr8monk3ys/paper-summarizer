@@ -6,8 +6,9 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
-from passlib.context import CryptContext
+import jwt as pyjwt
+from jwt.exceptions import InvalidTokenError
+import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 
@@ -28,21 +29,20 @@ class LoginRequest(BaseModel):
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(password, hashed_password)
+    return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
 def create_access_token(subject: str, secret: str, expires_minutes: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     payload = {"sub": subject, "exp": expire}
-    return jwt.encode(payload, secret, algorithm="HS256")
+    return pyjwt.encode(payload, secret, algorithm="HS256")
 
 
 @router.post("/register")
@@ -78,9 +78,9 @@ def login(request: Request, payload: LoginRequest) -> dict:
 def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> User:
     settings = _get_settings(request)
     try:
-        payload = jwt.decode(token, settings["SECRET_KEY"], algorithms=["HS256"])
+        payload = pyjwt.decode(token, settings["SECRET_KEY"], algorithms=["HS256"])
         user_id = payload.get("sub")
-    except (JWTError, KeyError) as exc:
+    except (InvalidTokenError, KeyError) as exc:
         raise HTTPException(status_code=401, detail="Invalid token") from exc
 
     if not user_id:
