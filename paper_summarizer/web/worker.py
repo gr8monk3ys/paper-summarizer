@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -13,6 +14,9 @@ from paper_summarizer.web.config import load_settings
 from paper_summarizer.web.db import create_db_engine, get_session
 from paper_summarizer.web.models import Job, Summary
 from paper_summarizer.web.validation import validate_url
+
+logger = logging.getLogger(__name__)
+_MAX_ERROR_LENGTH = 500
 
 
 async def run_summary_job(ctx, job_id: str) -> None:
@@ -95,30 +99,33 @@ async def run_summary_job(ctx, job_id: str) -> None:
                 job.completed_at = summary_record.created_at
                 session.add(job)
                 session.commit()
-    except (ValueError, KeyError, TypeError) as exc:  # pragma: no cover
+    except (ValueError, KeyError, TypeError) as exc:
+        logger.warning("Job %s failed: %s", job_id, exc)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
                 job.status = "failed"
-                job.error = str(exc)
+                job.error = str(exc)[:_MAX_ERROR_LENGTH]
                 job.completed_at = datetime.now(timezone.utc)
                 session.add(job)
                 session.commit()
-    except HTTPException as exc:  # pragma: no cover
+    except HTTPException as exc:
+        logger.warning("Job %s failed with HTTP %s: %s", job_id, exc.status_code, exc.detail)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
                 job.status = "failed"
-                job.error = exc.detail
+                job.error = str(exc.detail)[:_MAX_ERROR_LENGTH]
                 job.completed_at = datetime.now(timezone.utc)
                 session.add(job)
                 session.commit()
-    except (SQLAlchemyError, OSError, RuntimeError) as exc:  # pragma: no cover
+    except (SQLAlchemyError, OSError, RuntimeError) as exc:
+        logger.exception("Job %s failed unexpectedly", job_id)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
                 job.status = "failed"
-                job.error = str(exc)
+                job.error = str(exc)[:_MAX_ERROR_LENGTH]
                 job.completed_at = datetime.now(timezone.utc)
                 session.add(job)
                 session.commit()

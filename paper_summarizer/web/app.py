@@ -16,7 +16,7 @@ from .middleware import MaxContentSizeMiddleware
 from .metrics import MetricsMiddleware, metrics_response
 from .observability import RequestLoggingMiddleware
 from .ratelimit import RateLimitConfig, RateLimiter, RateLimitMiddleware
-from .security import CSRFMiddleware, SecurityHeadersMiddleware
+from .security import CSRFMiddleware, HTTPSRedirectMiddleware, SecurityHeadersMiddleware
 from .routes import router, STATIC_DIR
 import sentry_sdk
 from arq import create_pool
@@ -57,11 +57,14 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
 
     app = FastAPI(title="Paper Summarizer", lifespan=lifespan)
 
-    allowed_origins = [
-        o.strip()
-        for o in str(settings.get("CORS_ALLOWED_ORIGINS", "")).split(",")
-        if o.strip()
-    ]
+    allowed_origins = []
+    for o in str(settings.get("CORS_ALLOWED_ORIGINS", "")).split(","):
+        origin = o.strip()
+        if origin and origin.startswith(("https://", "http://")):
+            allowed_origins.append(origin)
+        elif origin:
+            logger.warning("Ignoring invalid CORS origin (must start with http:// or https://): %s", origin)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -69,6 +72,10 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
     )
+
+    app_env = str(settings.get("APP_ENV", "development"))
+    if app_env == "production":
+        app.add_middleware(HTTPSRedirectMiddleware)
 
     limiter = RateLimiter(
         RateLimitConfig(

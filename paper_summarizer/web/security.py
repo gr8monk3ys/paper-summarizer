@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import logging
 from urllib.parse import urlparse
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
+
+logger = logging.getLogger(__name__)
+
+
+class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    """Redirect HTTP to HTTPS in production based on X-Forwarded-Proto."""
+
+    async def dispatch(self, request: Request, call_next):
+        proto = request.headers.get("x-forwarded-proto", "").lower()
+        if proto == "http":
+            url = request.url.replace(scheme="https")
+            return RedirectResponse(str(url), status_code=301)
+        return await call_next(request)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -32,7 +46,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
         if self.app_env == "production":
-            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
         return response
 
 

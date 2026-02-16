@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,10 @@ from paper_summarizer.web.schemas import (
     JobSummaryRequest,
     ModelInfo,
 )
+
+logger = logging.getLogger(__name__)
+
+_MAX_ERROR_LENGTH = 500
 
 router = APIRouter()
 
@@ -107,12 +112,13 @@ def _run_summary_job(
                 job.completed_at = summary_record.created_at
                 session.add(job)
                 session.commit()
-    except (ValueError, OSError, RuntimeError, TypeError) as exc:  # pragma: no cover - defensive guard for background tasks
+    except (ValueError, OSError, RuntimeError, TypeError) as exc:
+        error_msg = str(exc)[:_MAX_ERROR_LENGTH]
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
                 job.status = "failed"
-                job.error = str(exc)
+                job.error = error_msg
                 job.completed_at = datetime.now(timezone.utc)
                 session.add(job)
                 session.commit()
@@ -143,7 +149,18 @@ async def create_summary_job(
 
     redis = getattr(request.app.state, "redis", None)
     if redis is not None:
-        await redis.enqueue_job("run_summary_job", job.id)
+        try:
+            await redis.enqueue_job("run_summary_job", job.id)
+        except Exception:
+            logger.exception("Failed to enqueue job %s to Redis, falling back to background task", job.id)
+            background_tasks.add_task(
+                _run_summary_job,
+                job.id,
+                settings,
+                engine,
+                payload,
+                current_user.id,
+            )
     else:
         background_tasks.add_task(
             _run_summary_job,

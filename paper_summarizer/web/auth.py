@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -26,6 +27,8 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -68,6 +71,11 @@ def login(request: Request, payload: LoginRequest) -> dict:
     with get_session(engine) as session:
         user = session.exec(select(User).where(User.email == payload.email)).first()
         if not user or not verify_password(payload.password, user.hashed_password):
+            logger.warning(
+                "Failed login attempt for email=%s from ip=%s",
+                payload.email,
+                request.client.host if request.client else "unknown",
+            )
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
     settings = _get_settings(request)
@@ -81,6 +89,7 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> U
         payload = pyjwt.decode(token, settings["SECRET_KEY"], algorithms=["HS256"])
         user_id = payload.get("sub")
     except (InvalidTokenError, KeyError) as exc:
+        logger.warning("Invalid token from ip=%s", request.client.host if request.client else "unknown")
         raise HTTPException(status_code=401, detail="Invalid token") from exc
 
     if not user_id:
