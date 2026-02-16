@@ -329,8 +329,12 @@ class TestSummaryCRUD:
         response = client.get("/api/summaries", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert "summaries" in data
-        assert len(data["summaries"]) >= 2
+        assert "items" in data
+        assert "total" in data
+        assert "limit" in data
+        assert "offset" in data
+        assert len(data["items"]) >= 2
+        assert data["total"] >= 2
 
     def test_get_summary_detail(self, client, auth_headers):
         summary_id = _create_summary(client, auth_headers)
@@ -409,7 +413,7 @@ class TestSummaryCRUD:
 
         # Verify they appear in the list
         list_resp = client.get("/api/summaries", headers=auth_headers)
-        titles = [s["title"] for s in list_resp.json()["summaries"]]
+        titles = [s["title"] for s in list_resp.json()["items"]]
         assert "Imported Paper 1" in titles
         assert "Imported Paper 2" in titles
 

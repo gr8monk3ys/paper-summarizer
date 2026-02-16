@@ -1,6 +1,7 @@
 """Core summarizer module for the Paper Summarizer application."""
 
 import os
+import re
 import logging
 import httpx
 from enum import Enum
@@ -162,18 +163,45 @@ class PaperSummarizer:
             self.logger.error(f"Failed to read or summarize file {file_path}: {str(e)}")
             raise ValueError(f"Failed to read or summarize file {file_path}: {str(e)}")
 
+    _INJECTION_PATTERNS = re.compile(
+        r"(###|---|System:|Assistant:|Human:|IGNORE PREVIOUS INSTRUCTIONS)",
+        re.IGNORECASE,
+    )
+    _MAX_INPUT_LENGTH = 100_000
+
+    def _sanitize_input(self, text: str) -> str:
+        """Strip prompt-injection-style delimiters and enforce length limits.
+
+        Args:
+            text: Raw user-supplied text.
+
+        Returns:
+            Cleaned text safe for interpolation into LLM prompts.
+        """
+        if len(text) > self._MAX_INPUT_LENGTH:
+            self.logger.warning(
+                "Input text length (%d) exceeds maximum (%d); truncating.",
+                len(text),
+                self._MAX_INPUT_LENGTH,
+            )
+            text = text[: self._MAX_INPUT_LENGTH]
+
+        text = self._INJECTION_PATTERNS.sub("", text)
+        return text
+
     def _summarize_local(self, text: str) -> str:
         """Summarize text using local model.
-        
+
         Args:
             text: Text to summarize
-            
+
         Returns:
             Summarized text
-            
+
         Raises:
             ValueError: If summarization fails
         """
+        text = self._sanitize_input(text)
         try:
             result = self.model(text, max_length=150, min_length=50, do_sample=False)
             return result[0]['summary_text']
@@ -182,16 +210,17 @@ class PaperSummarizer:
 
     def _summarize_together_ai(self, text: str) -> str:
         """Summarize text using Together AI.
-        
+
         Args:
             text: Text to summarize
-            
+
         Returns:
             Summarized text
-            
+
         Raises:
             ValueError: If summarization fails
         """
+        text = self._sanitize_input(text)
         try:
             prompt = f"Please summarize the following text:\n\n{text}\n\nSummary:"
             response = together.Complete.create(

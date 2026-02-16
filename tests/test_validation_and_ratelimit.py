@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import socket
 import time
 from unittest.mock import MagicMock, patch
@@ -137,20 +138,20 @@ class TestInMemoryBackend:
     def test_allows_requests_within_limit(self):
         backend = InMemoryBackend()
         for _ in range(5):
-            assert backend.allow("client1", max_requests=5, window_seconds=60) is True
+            assert asyncio.run(backend.allow("client1", max_requests=5, window_seconds=60)) is True
 
     def test_blocks_when_limit_exceeded(self):
         backend = InMemoryBackend()
         for _ in range(3):
-            backend.allow("client1", max_requests=3, window_seconds=60)
-        assert backend.allow("client1", max_requests=3, window_seconds=60) is False
+            asyncio.run(backend.allow("client1", max_requests=3, window_seconds=60))
+        assert asyncio.run(backend.allow("client1", max_requests=3, window_seconds=60)) is False
 
     def test_window_expiry(self):
         backend = InMemoryBackend()
         # Fill up the bucket
         for _ in range(2):
-            assert backend.allow("client1", max_requests=2, window_seconds=1) is True
-        assert backend.allow("client1", max_requests=2, window_seconds=1) is False
+            assert asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1)) is True
+        assert asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1)) is False
 
         # Patch time.monotonic to simulate passage of time beyond the window
         original_monotonic = time.monotonic
@@ -161,14 +162,14 @@ class TestInMemoryBackend:
 
         with patch("paper_summarizer.web.ratelimit.time.monotonic", side_effect=patched_monotonic):
             offset = 2.0  # Jump forward 2 seconds (past the 1-second window)
-            assert backend.allow("client1", max_requests=2, window_seconds=1) is True
+            assert asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1)) is True
 
     def test_separate_keys_are_independent(self):
         backend = InMemoryBackend()
-        assert backend.allow("a", max_requests=1, window_seconds=60) is True
-        assert backend.allow("a", max_requests=1, window_seconds=60) is False
+        assert asyncio.run(backend.allow("a", max_requests=1, window_seconds=60)) is True
+        assert asyncio.run(backend.allow("a", max_requests=1, window_seconds=60)) is False
         # Different key should still be allowed
-        assert backend.allow("b", max_requests=1, window_seconds=60) is True
+        assert asyncio.run(backend.allow("b", max_requests=1, window_seconds=60)) is True
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +213,7 @@ class TestRedisBackend:
         with patch.object(backend, "_get_client", return_value=mock_client):
             assert backend.allow("key", 5, 60) is False
 
-    def test_fails_open_on_pipeline_exception(self):
+    def test_fails_closed_on_pipeline_exception(self):
         backend = RedisBackend("redis://localhost:6379")
         mock_client = MagicMock()
         mock_pipe = MagicMock()
@@ -220,7 +221,7 @@ class TestRedisBackend:
         mock_pipe.execute.side_effect = Exception("Redis pipeline error")
 
         with patch.object(backend, "_get_client", return_value=mock_client):
-            assert backend.allow("key", 5, 60) is True
+            assert backend.allow("key", 5, 60) is False
 
 
 # ---------------------------------------------------------------------------
@@ -233,23 +234,23 @@ class TestRateLimiter:
     def test_allow_within_limit_no_redis(self):
         config = RateLimitConfig(requests=3, window_seconds=60)
         limiter = RateLimiter(config)
-        assert limiter.allow("client1") is True
-        assert limiter.allow("client1") is True
-        assert limiter.allow("client1") is True
+        assert asyncio.run(limiter.allow("client1")) is True
+        assert asyncio.run(limiter.allow("client1")) is True
+        assert asyncio.run(limiter.allow("client1")) is True
 
     def test_block_when_exceeded_no_redis(self):
         config = RateLimitConfig(requests=2, window_seconds=60)
         limiter = RateLimiter(config)
-        assert limiter.allow("client1") is True
-        assert limiter.allow("client1") is True
-        assert limiter.allow("client1") is False
+        assert asyncio.run(limiter.allow("client1")) is True
+        assert asyncio.run(limiter.allow("client1")) is True
+        assert asyncio.run(limiter.allow("client1")) is False
 
     def test_disabled_always_allows(self):
         config = RateLimitConfig(requests=1, window_seconds=60, enabled=False)
         limiter = RateLimiter(config)
         # Should always return True regardless of how many requests
         for _ in range(10):
-            assert limiter.allow("client1") is True
+            assert asyncio.run(limiter.allow("client1")) is True
 
     def test_uses_redis_backend_when_url_provided(self):
         config = RateLimitConfig(requests=5, window_seconds=60)

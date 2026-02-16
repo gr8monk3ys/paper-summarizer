@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import secrets
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 APP_ENV = os.getenv("APP_ENV", "development")
 
@@ -15,7 +18,12 @@ def _resolve_secret_key() -> str:
     if secret:
         return secret
     if APP_ENV == "development":
-        return "dev-secret-change-me"
+        random_key = secrets.token_hex(32)
+        logger.warning(
+            "SECRET_KEY not set — generated a random key. "
+            "Sessions will NOT persist across restarts."
+        )
+        return random_key
     raise RuntimeError(
         "SECRET_KEY environment variable is required when APP_ENV "
         f"is '{APP_ENV}' (i.e. not 'development'). Set it before starting the server."
@@ -48,6 +56,36 @@ DEFAULT_SETTINGS = {
 }
 
 
+def validate_settings(settings: dict) -> None:
+    """Validate settings, raising ValueError on invalid configuration.
+
+    In production (APP_ENV=production):
+      - SECRET_KEY must be explicitly set (non-empty).
+      - DATABASE_URL must be set.
+      - TOGETHER_API_KEY env var must be set if DEFAULT_PROVIDER is 'together_ai'.
+    """
+    app_env = settings.get("APP_ENV", "development")
+    if app_env != "production":
+        return
+
+    if not settings.get("SECRET_KEY"):
+        raise ValueError(
+            "SECRET_KEY must be explicitly set in production (APP_ENV=production)."
+        )
+
+    if not settings.get("DATABASE_URL"):
+        raise ValueError(
+            "DATABASE_URL must be set in production (APP_ENV=production)."
+        )
+
+    if settings.get("DEFAULT_PROVIDER") == "together_ai":
+        if not os.getenv("TOGETHER_API_KEY"):
+            raise ValueError(
+                "TOGETHER_API_KEY environment variable must be set when "
+                "DEFAULT_PROVIDER is 'together_ai' in production."
+            )
+
+
 def load_settings(overrides: dict | None = None) -> dict:
     """Load settings with optional overrides."""
     settings = dict(DEFAULT_SETTINGS)
@@ -62,5 +100,7 @@ def load_settings(overrides: dict | None = None) -> dict:
     if db_url.startswith("sqlite:///"):
         db_path = Path(db_url.replace("sqlite:///", ""))
         db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    validate_settings(settings)
 
     return settings

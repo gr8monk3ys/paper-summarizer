@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 from uuid import uuid4
 
 from sqlmodel import Field, SQLModel
+
+
+class JobStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETE = "complete"
+    FAILED = "failed"
 
 
 class Summary(SQLModel, table=True):

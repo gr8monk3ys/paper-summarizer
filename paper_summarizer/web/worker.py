@@ -12,11 +12,29 @@ from sqlalchemy.exc import SQLAlchemyError
 from paper_summarizer.core.summarizer import ModelProvider, ModelType, PaperSummarizer
 from paper_summarizer.web.config import load_settings
 from paper_summarizer.web.db import create_db_engine, get_session
-from paper_summarizer.web.models import Job, Summary
+from paper_summarizer.web.models import Job, JobStatus, Summary
 from paper_summarizer.web.validation import validate_url
 
 logger = logging.getLogger(__name__)
 _MAX_ERROR_LENGTH = 500
+
+
+def _complete_job(
+    session,
+    job: Job,
+    result_json: str | None = None,
+    error: str | None = None,
+) -> None:
+    """Set a job to its terminal state (COMPLETE or FAILED)."""
+    if error is not None:
+        job.status = JobStatus.FAILED
+        job.error = error[:_MAX_ERROR_LENGTH]
+    else:
+        job.status = JobStatus.COMPLETE
+        job.result_json = result_json
+    job.completed_at = datetime.now(timezone.utc)
+    session.add(job)
+    session.commit()
 
 
 async def run_summary_job(ctx, job_id: str) -> None:
@@ -25,12 +43,17 @@ async def run_summary_job(ctx, job_id: str) -> None:
 
     with get_session(engine) as session:
         job = session.get(Job, job_id)
-        if not job or job.status not in {"queued", "running"}:
+        if not job or job.status not in {JobStatus.QUEUED, JobStatus.RUNNING}:
             return
-        job.status = "running"
+        job.status = JobStatus.RUNNING
         session.add(job)
         session.commit()
-        payload = json.loads(job.payload_json)
+        try:
+            payload = json.loads(job.payload_json)
+        except json.JSONDecodeError:
+            logger.error("Corrupted payload_json for job %s", job_id)
+            _complete_job(session, job, error="Corrupted job payload data")
+            return
 
     try:
         source_type = payload.get("source_type")
@@ -88,47 +111,32 @@ async def run_summary_job(ctx, job_id: str) -> None:
 
             job = session.get(Job, job_id)
             if job:
-                job.status = "complete"
-                job.result_json = json.dumps(
+                result_payload = json.dumps(
                     {
                         "summary_id": summary_record.id,
                         "summary": summary_record.summary,
                         "created_at": summary_record.created_at.isoformat(),
                     }
                 )
-                job.completed_at = summary_record.created_at
-                session.add(job)
-                session.commit()
+                _complete_job(session, job, result_json=result_payload)
     except (ValueError, KeyError, TypeError) as exc:
-        logger.warning("Job %s failed: %s", job_id, exc)
+        logger.error("Job %s failed: %s", job_id, exc)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                job.status = "failed"
-                job.error = str(exc)[:_MAX_ERROR_LENGTH]
-                job.completed_at = datetime.now(timezone.utc)
-                session.add(job)
-                session.commit()
+                _complete_job(session, job, error=str(exc))
     except HTTPException as exc:
-        logger.warning("Job %s failed with HTTP %s: %s", job_id, exc.status_code, exc.detail)
+        logger.error("Job %s failed with HTTP %s: %s", job_id, exc.status_code, exc.detail)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                job.status = "failed"
-                job.error = str(exc.detail)[:_MAX_ERROR_LENGTH]
-                job.completed_at = datetime.now(timezone.utc)
-                session.add(job)
-                session.commit()
+                _complete_job(session, job, error=str(exc.detail))
     except (SQLAlchemyError, OSError, RuntimeError) as exc:
         logger.exception("Job %s failed unexpectedly", job_id)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                job.status = "failed"
-                job.error = str(exc)[:_MAX_ERROR_LENGTH]
-                job.completed_at = datetime.now(timezone.utc)
-                session.add(job)
-                session.commit()
+                _complete_job(session, job, error=str(exc))
 
 
 async def startup(ctx) -> None:

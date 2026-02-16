@@ -13,14 +13,10 @@ def mock_summarizer():
     mock_instance.summarize.return_value = TEST_DATA['sample_summary']
     mock_instance.summarize_from_url.return_value = TEST_DATA['sample_summary']
     mock_instance.summarize_from_file.return_value = TEST_DATA['sample_summary']
-    mock_instance.get_available_models.return_value = {
-        "together_ai": [
-            {"id": "deepseek-r1", "name": "DeepSeek R1", "description": "High-quality model"}
-        ],
-        "local": [
-            {"id": "t5-small", "name": "T5 Small", "description": "Fast local model"}
-        ]
-    }
+    mock_instance.get_available_models.return_value = [
+        {"name": "deepseek-r1", "provider": "together_ai", "description": "High-quality model"},
+        {"name": "t5-small", "provider": "local", "description": "Fast local model"},
+    ]
     with patch('paper_summarizer.web.routes.summaries.PaperSummarizer') as mock_summaries, \
          patch('paper_summarizer.web.routes.html.PaperSummarizer') as mock_html, \
          patch('paper_summarizer.web.routes.jobs.PaperSummarizer') as mock_jobs:

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 import jwt as pyjwt
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
@@ -85,11 +85,21 @@ def login(request: Request, payload: LoginRequest) -> dict:
 
 def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> User:
     settings = _get_settings(request)
+    client_ip = request.client.host if request.client else "unknown"
+
     try:
-        payload = pyjwt.decode(token, settings["SECRET_KEY"], algorithms=["HS256"])
+        payload = pyjwt.decode(
+            token,
+            settings["SECRET_KEY"],
+            algorithms=["HS256"],
+            options={"require": ["exp", "sub"]},
+        )
         user_id = payload.get("sub")
+    except ExpiredSignatureError as exc:
+        logger.warning("Expired token from ip=%s", client_ip)
+        raise HTTPException(status_code=401, detail="Token expired") from exc
     except (InvalidTokenError, KeyError) as exc:
-        logger.warning("Invalid token from ip=%s", request.client.host if request.client else "unknown")
+        logger.warning("Invalid token from ip=%s", client_ip)
         raise HTTPException(status_code=401, detail="Invalid token") from exc
 
     if not user_id:

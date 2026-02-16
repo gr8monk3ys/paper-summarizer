@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
-from sqlmodel import select
+from sqlmodel import func, select
 
 from paper_summarizer.core.summarizer import PaperSummarizer, ModelType, ModelProvider
 from paper_summarizer.web.auth import get_current_user
@@ -184,17 +184,27 @@ def get_analytics(request: Request, current_user: User = Depends(get_current_use
 
 
 @router.get("/api/summaries", response_model=SummaryListResponse, tags=["summaries"])
-def list_summaries(request: Request, current_user: User = Depends(get_current_user)) -> SummaryListResponse:
+def list_summaries(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> SummaryListResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
+        total = session.exec(
+            select(func.count()).select_from(Summary).where(Summary.user_id == current_user.id)
+        ).one()
         rows = session.exec(
             select(Summary)
             .where(Summary.user_id == current_user.id)
             .order_by(Summary.created_at.desc())
+            .offset(offset)
+            .limit(limit)
         ).all()
 
     return SummaryListResponse(
-        summaries=[
+        items=[
             {
                 "id": row.id,
                 "title": row.title,
@@ -202,7 +212,10 @@ def list_summaries(request: Request, current_user: User = Depends(get_current_us
                 "created_at": row.created_at,
             }
             for row in rows
-        ]
+        ],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
