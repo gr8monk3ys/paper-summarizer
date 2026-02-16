@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text
 
 from paper_summarizer.core.summarizer import PaperSummarizer, ModelProvider
 from paper_summarizer.web.config import load_settings
@@ -68,8 +69,33 @@ def synthesis(request: Request) -> HTMLResponse:
 
 
 @router.get("/health", response_class=JSONResponse)
-def health() -> JSONResponse:
-    return JSONResponse({"status": "ok"})
+async def health(request: Request) -> JSONResponse:
+    """Check database and Redis connectivity."""
+    result: dict[str, str] = {"status": "healthy"}
+
+    # Database check
+    try:
+        engine = request.app.state.engine
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        result["database"] = "ok"
+    except Exception:
+        result["database"] = "error"
+        result["status"] = "unhealthy"
+
+    # Redis check
+    redis = getattr(request.app.state, "redis", None)
+    if redis is not None:
+        try:
+            await redis.ping()
+            result["redis"] = "ok"
+        except Exception:
+            result["redis"] = "error"
+    else:
+        result["redis"] = "not_configured"
+
+    status_code = 200 if result["database"] == "ok" else 503
+    return JSONResponse(result, status_code=status_code)
 
 
 @router.get("/models", response_class=JSONResponse, tags=["meta"])
@@ -80,10 +106,6 @@ def get_models() -> JSONResponse:
         provider=ModelProvider.TOGETHER_AI if not settings.get("LOCAL_MODELS_ENABLED", True) else ModelProvider.LOCAL
     )
     models = summarizer.get_available_models()
-    if isinstance(models, dict):
-        if not settings.get("LOCAL_MODELS_ENABLED", True):
-            models.pop("local", None)
-        return JSONResponse(models)
 
     grouped = {}
     for model in models:

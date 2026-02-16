@@ -40,7 +40,10 @@ class SummaryListItem(BaseModel):
 
 
 class SummaryListResponse(BaseModel):
-    summaries: list[SummaryListItem]
+    items: list[SummaryListItem]
+    total: int
+    limit: int
+    offset: int
 
 
 class SummaryDetailResponse(BaseModel):

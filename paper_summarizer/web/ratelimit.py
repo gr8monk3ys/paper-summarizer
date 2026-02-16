@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections import defaultdict, deque
@@ -25,19 +26,40 @@ class RateLimitConfig:
 class InMemoryBackend:
     """In-memory sliding window rate limiter (single-process only)."""
 
+    _CLEANUP_INTERVAL = 100  # run cleanup every N calls to allow()
+    _STALE_SECONDS = 300  # remove entries not accessed in 5 minutes
+
     def __init__(self) -> None:
         self._buckets: DefaultDict[str, Deque[float]] = defaultdict(deque)
+        self._lock = asyncio.Lock()
+        self._call_count: int = 0
 
-    def allow(self, key: str, max_requests: int, window_seconds: int) -> bool:
+    async def allow(self, key: str, max_requests: int, window_seconds: int) -> bool:
+        async with self._lock:
+            self._call_count += 1
+            if self._call_count % self._CLEANUP_INTERVAL == 0:
+                self._cleanup()
+
+            now = time.monotonic()
+            window_start = now - window_seconds
+            bucket = self._buckets[key]
+            while bucket and bucket[0] < window_start:
+                bucket.popleft()
+            if len(bucket) >= max_requests:
+                return False
+            bucket.append(now)
+            return True
+
+    def _cleanup(self) -> None:
+        """Remove entries from _buckets that haven't been accessed in over 5 minutes."""
         now = time.monotonic()
-        window_start = now - window_seconds
-        bucket = self._buckets[key]
-        while bucket and bucket[0] < window_start:
-            bucket.popleft()
-        if len(bucket) >= max_requests:
-            return False
-        bucket.append(now)
-        return True
+        stale_keys = [
+            key
+            for key, bucket in self._buckets.items()
+            if not bucket or bucket[-1] < now - self._STALE_SECONDS
+        ]
+        for key in stale_keys:
+            del self._buckets[key]
 
 
 class RedisBackend:
@@ -80,8 +102,11 @@ class RedisBackend:
             current_count = results[1]
             return current_count < max_requests
         except Exception:
-            logger.warning("Redis rate-limit check failed, allowing request")
-            return True
+            # Fail closed: deny requests when rate limiting is degraded.
+            # It is safer to reject some legitimate traffic than to allow
+            # unbounded requests that could overwhelm downstream services.
+            logger.warning("Redis rate-limit check failed, denying request (fail-closed)")
+            return False
 
 
 class RateLimiter:
@@ -94,13 +119,23 @@ class RateLimiter:
             self._backend = InMemoryBackend()
             self._fallback = None
 
-    def allow(self, key: str) -> bool:
+    async def allow(self, key: str) -> bool:
         if not self.config.enabled:
             return True
-        allowed = self._backend.allow(
-            key, self.config.requests, self.config.window_seconds
-        )
+        backend = self._backend
+        if isinstance(backend, InMemoryBackend):
+            allowed = await backend.allow(
+                key, self.config.requests, self.config.window_seconds
+            )
+        else:
+            allowed = backend.allow(
+                key, self.config.requests, self.config.window_seconds
+            )
         if allowed is None and self._fallback is not None:
+            if isinstance(self._fallback, InMemoryBackend):
+                return await self._fallback.allow(
+                    key, self.config.requests, self.config.window_seconds
+                )
             return self._fallback.allow(
                 key, self.config.requests, self.config.window_seconds
             )
@@ -124,7 +159,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         else:
             client_ip = request.client.host if request.client else "unknown"
 
-        if not self.limiter.allow(client_ip):
+        if not await self.limiter.allow(client_ip):
             return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
 
         return await call_next(request)
