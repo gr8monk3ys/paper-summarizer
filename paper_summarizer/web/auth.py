@@ -16,6 +16,7 @@ from sqlmodel import select
 from .deps import _get_settings, _get_engine
 from .db import get_session
 from .models import User
+from .ratelimit import login_attempt_tracker
 
 
 class RegisterRequest(BaseModel):
@@ -67,16 +68,34 @@ def register(request: Request, payload: RegisterRequest) -> dict:
 
 @router.post("/login")
 def login(request: Request, payload: LoginRequest) -> dict:
+    email = payload.email.lower()
+
+    # Brute-force protection: block if too many recent failures for this email
+    if login_attempt_tracker.is_blocked(email):
+        logger.warning(
+            "Login blocked (too many failures) for email=%s from ip=%s",
+            email,
+            request.client.host if request.client else "unknown",
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Try again later.",
+        )
+
     engine = _get_engine(request)
     with get_session(engine) as session:
         user = session.exec(select(User).where(User.email == payload.email)).first()
         if not user or not verify_password(payload.password, user.hashed_password):
+            login_attempt_tracker.record_failure(email)
             logger.warning(
                 "Failed login attempt for email=%s from ip=%s",
                 payload.email,
                 request.client.host if request.client else "unknown",
             )
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Successful login resets the failure counter
+    login_attempt_tracker.reset(email)
 
     settings = _get_settings(request)
     token = create_access_token(user.id, settings["SECRET_KEY"], settings["ACCESS_TOKEN_EXPIRE_MINUTES"])

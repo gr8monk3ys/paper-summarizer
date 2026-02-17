@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 from urllib.parse import urlparse
 
@@ -84,8 +85,19 @@ def validate_url(url: str) -> None:
     if hostname == "::1" or hostname.startswith(_IPV6_PRIVATE_PREFIXES):
         raise HTTPException(status_code=400, detail="URL host is not allowed")
 
+    # Run DNS resolution in a thread pool with a timeout to prevent
+    # DNS-based slowloris attacks (blocking indefinitely on a slow resolver).
+    _DNS_TIMEOUT_SECONDS = 5
     try:
-        addr_info = socket.getaddrinfo(hostname, parsed.port or 443, type=socket.SOCK_STREAM)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                socket.getaddrinfo, hostname, parsed.port or 443, type=socket.SOCK_STREAM,
+            )
+            addr_info = future.result(timeout=_DNS_TIMEOUT_SECONDS)
+    except FuturesTimeoutError as exc:
+        raise HTTPException(
+            status_code=400, detail="URL host could not be resolved (DNS timeout)",
+        ) from exc
     except socket.gaierror as exc:
         raise HTTPException(status_code=400, detail="URL host could not be resolved") from exc
 

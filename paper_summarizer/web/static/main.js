@@ -195,15 +195,23 @@ async function loadEvidence() {
 
     const response = await authFetch(`/api/summaries/${entryId}/evidence`);
     if (!response.ok) {
-        evidenceList.innerHTML = '<p class="text-gray-500">Failed to load evidence.</p>';
+        evidenceList.textContent = '';
+        const failP = document.createElement('p');
+        failP.className = 'text-gray-500';
+        failP.textContent = 'Failed to load evidence.';
+        evidenceList.appendChild(failP);
         return;
     }
     const data = await response.json();
     if (!data.items || data.items.length === 0) {
-        evidenceList.innerHTML = '<p class="text-gray-500">No evidence items yet.</p>';
+        evidenceList.textContent = '';
+        const emptyP = document.createElement('p');
+        emptyP.className = 'text-gray-500';
+        emptyP.textContent = 'No evidence items yet.';
+        evidenceList.appendChild(emptyP);
         return;
     }
-    evidenceList.innerHTML = '';
+    evidenceList.textContent = '';
     data.items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'summary-card';
@@ -464,10 +472,13 @@ async function loadHistory() {
     try {
         const response = await authFetch('/api/summaries');
         const data = await response.json();
-        historyList.innerHTML = '';
+        historyList.textContent = '';
 
         if (!data.summaries || data.summaries.length === 0) {
-            historyList.innerHTML = '<p class="text-gray-500">No summaries yet.</p>';
+            const noSummP = document.createElement('p');
+            noSummP.className = 'text-gray-500';
+            noSummP.textContent = 'No summaries yet.';
+            historyList.appendChild(noSummP);
             return;
         }
 
@@ -487,7 +498,11 @@ async function loadHistory() {
             historyList.appendChild(card);
         });
     } catch (error) {
-        historyList.innerHTML = '<p class="text-gray-500">Failed to load history.</p>';
+        historyList.textContent = '';
+        const histFailP = document.createElement('p');
+        histFailP.className = 'text-gray-500';
+        histFailP.textContent = 'Failed to load history.';
+        historyList.appendChild(histFailP);
     }
 }
 
