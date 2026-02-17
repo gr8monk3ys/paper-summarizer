@@ -35,7 +35,7 @@ DEFAULT_SETTINGS = {
     "UPLOAD_FOLDER": Path(os.getenv("UPLOAD_FOLDER", "uploads")),
     "DATABASE_URL": os.getenv("DATABASE_URL", "sqlite:///data/paper_summarizer.db"),
     "SECRET_KEY": _resolve_secret_key(),
-    "ACCESS_TOKEN_EXPIRE_MINUTES": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")),
+    "ACCESS_TOKEN_EXPIRE_MINUTES": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")),
     "AUTO_CREATE_DB": os.getenv("AUTO_CREATE_DB", "true" if APP_ENV != "production" else "false").lower() == "true",
     "MAX_CONTENT_LENGTH": 16 * 1024 * 1024,
     "ALLOWED_EXTENSIONS": {"txt", "pdf", "md", "rst"},
