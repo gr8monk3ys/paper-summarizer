@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Failed to process files');
             }
 
-            resultsList.innerHTML = '';
+            resultsList.textContent = '';
             data.summaries.forEach(result => {
                 const resultDiv = document.createElement('div');
                 resultDiv.className = 'summary-card';

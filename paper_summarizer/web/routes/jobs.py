@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,7 @@ from paper_summarizer.core.summarizer import PaperSummarizer, ModelType, ModelPr
 from paper_summarizer.web.auth import get_current_user
 from paper_summarizer.web.db import get_session
 from paper_summarizer.web.deps import _get_settings, _get_engine, _allowed_file
-from paper_summarizer.web.models import Job, Summary, User
+from paper_summarizer.web.models import Job, JobStatus, Summary, User
 from paper_summarizer.web.validation import validate_upload, validate_url
 from paper_summarizer.web.schemas import (
     BatchSummaryItem,
@@ -26,7 +27,30 @@ from paper_summarizer.web.schemas import (
     ModelInfo,
 )
 
+logger = logging.getLogger(__name__)
+
+_MAX_ERROR_LENGTH = 500
+_MAX_BATCH_FILES = 20
+
 router = APIRouter()
+
+
+def _complete_job(
+    session,
+    job: Job,
+    result_json: str | None = None,
+    error: str | None = None,
+) -> None:
+    """Set a job to its terminal state (COMPLETE or FAILED)."""
+    if error is not None:
+        job.status = JobStatus.FAILED
+        job.error = error[:_MAX_ERROR_LENGTH]
+    else:
+        job.status = JobStatus.COMPLETE
+        job.result_json = result_json
+    job.completed_at = datetime.now(timezone.utc)
+    session.add(job)
+    session.commit()
 
 
 def _run_summary_job(
@@ -40,7 +64,7 @@ def _run_summary_job(
         job = session.get(Job, job_id)
         if not job:
             return
-        job.status = "running"
+        job.status = JobStatus.RUNNING
         session.add(job)
         session.commit()
 
@@ -102,20 +126,12 @@ def _run_summary_job(
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                job.status = "complete"
-                job.result_json = json.dumps(result_payload)
-                job.completed_at = summary_record.created_at
-                session.add(job)
-                session.commit()
-    except (ValueError, OSError, RuntimeError, TypeError) as exc:  # pragma: no cover - defensive guard for background tasks
+                _complete_job(session, job, result_json=json.dumps(result_payload))
+    except (ValueError, OSError, RuntimeError, TypeError) as exc:
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                job.status = "failed"
-                job.error = str(exc)
-                job.completed_at = datetime.now(timezone.utc)
-                session.add(job)
-                session.commit()
+                _complete_job(session, job, error=str(exc))
 
 
 @router.post("/api/jobs/summarize", response_model=JobCreateResponse, tags=["jobs"])
@@ -133,7 +149,7 @@ async def create_summary_job(
 
     job = Job(
         user_id=current_user.id,
-        status="queued",
+        status=JobStatus.QUEUED,
         payload_json=json.dumps(payload.model_dump()),
     )
     with get_session(engine) as session:
@@ -143,7 +159,18 @@ async def create_summary_job(
 
     redis = getattr(request.app.state, "redis", None)
     if redis is not None:
-        await redis.enqueue_job("run_summary_job", job.id)
+        try:
+            await redis.enqueue_job("run_summary_job", job.id)
+        except Exception:
+            logger.exception("Failed to enqueue job %s to Redis, falling back to background task", job.id)
+            background_tasks.add_task(
+                _run_summary_job,
+                job.id,
+                settings,
+                engine,
+                payload,
+                current_user.id,
+            )
     else:
         background_tasks.add_task(
             _run_summary_job,
@@ -165,7 +192,13 @@ def get_job_status(
         job = session.get(Job, job_id)
         if not job or job.user_id != current_user.id:
             raise HTTPException(status_code=404, detail="Job not found")
-        result = json.loads(job.result_json) if job.result_json else None
+        result = None
+        if job.result_json:
+            try:
+                result = json.loads(job.result_json)
+            except json.JSONDecodeError:
+                logger.error("Corrupted result_json for job %s", job_id)
+                raise HTTPException(status_code=500, detail="Corrupted job result data")
 
     return JobStatusResponse(
         job_id=job.id,
@@ -198,6 +231,12 @@ async def process_batch(
 
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
+
+    if len(files) > _MAX_BATCH_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files: maximum is {_MAX_BATCH_FILES}, got {len(files)}",
+        )
 
     try:
         summarizer = PaperSummarizer(

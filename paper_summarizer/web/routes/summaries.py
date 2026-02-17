@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
-from sqlmodel import select
+from sqlmodel import func, select
 
 from paper_summarizer.core.summarizer import PaperSummarizer, ModelType, ModelProvider
 from paper_summarizer.web.auth import get_current_user
@@ -155,22 +155,40 @@ async def save_settings(current_user: User = Depends(get_current_user)) -> JSONR
 def get_analytics(request: Request, current_user: User = Depends(get_current_user)) -> JSONResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
-        rows = session.exec(select(Summary).where(Summary.user_id == current_user.id)).all()
+        # Total count
+        total = session.exec(
+            select(func.count()).select_from(Summary).where(Summary.user_id == current_user.id)
+        ).one()
 
-    total = len(rows)
-    model_usage: dict[str, int] = {}
-    length_distribution: dict[str, int] = {}
-    daily_activity: dict[str, int] = {}
-    total_length = 0
+        # Model usage: GROUP BY model_type
+        model_rows = session.exec(
+            select(Summary.model_type, func.count()).where(
+                Summary.user_id == current_user.id
+            ).group_by(Summary.model_type)
+        ).all()
+        model_usage = {row[0]: row[1] for row in model_rows}
 
-    for row in rows:
-        model_usage[row.model_type] = model_usage.get(row.model_type, 0) + 1
-        length_distribution[str(row.num_sentences)] = length_distribution.get(str(row.num_sentences), 0) + 1
-        day_key = row.created_at.date().isoformat()
-        daily_activity[day_key] = daily_activity.get(day_key, 0) + 1
-        total_length += row.num_sentences
+        # Length distribution: GROUP BY num_sentences
+        length_rows = session.exec(
+            select(Summary.num_sentences, func.count()).where(
+                Summary.user_id == current_user.id
+            ).group_by(Summary.num_sentences)
+        ).all()
+        length_distribution = {str(row[0]): row[1] for row in length_rows}
 
-    average_length = (total_length / total) if total else 0
+        # Average length
+        avg_length = session.exec(
+            select(func.avg(Summary.num_sentences)).where(Summary.user_id == current_user.id)
+        ).one()
+        average_length = float(avg_length) if avg_length else 0
+
+        # Daily activity: GROUP BY date(created_at)
+        daily_rows = session.exec(
+            select(func.date(Summary.created_at), func.count()).where(
+                Summary.user_id == current_user.id
+            ).group_by(func.date(Summary.created_at))
+        ).all()
+        daily_activity = {str(row[0]): row[1] for row in daily_rows}
 
     analytics = {
         "totalSummaries": total,
@@ -184,17 +202,27 @@ def get_analytics(request: Request, current_user: User = Depends(get_current_use
 
 
 @router.get("/api/summaries", response_model=SummaryListResponse, tags=["summaries"])
-def list_summaries(request: Request, current_user: User = Depends(get_current_user)) -> SummaryListResponse:
+def list_summaries(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> SummaryListResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
+        total = session.exec(
+            select(func.count()).select_from(Summary).where(Summary.user_id == current_user.id)
+        ).one()
         rows = session.exec(
             select(Summary)
             .where(Summary.user_id == current_user.id)
             .order_by(Summary.created_at.desc())
+            .offset(offset)
+            .limit(limit)
         ).all()
 
     return SummaryListResponse(
-        summaries=[
+        items=[
             {
                 "id": row.id,
                 "title": row.title,
@@ -202,7 +230,10 @@ def list_summaries(request: Request, current_user: User = Depends(get_current_us
                 "created_at": row.created_at,
             }
             for row in rows
-        ]
+        ],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -239,13 +270,20 @@ def delete_summary(summary_id: str, request: Request, current_user: User = Depen
 
 
 @router.get("/api/summaries/export", response_class=JSONResponse, tags=["summaries"])
-def export_summaries(request: Request, current_user: User = Depends(get_current_user)) -> JSONResponse:
+def export_summaries(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    offset: int = Query(default=0, ge=0),
+) -> JSONResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         rows = session.exec(
             select(Summary)
             .where(Summary.user_id == current_user.id)
             .order_by(Summary.created_at.desc())
+            .offset(offset)
+            .limit(limit)
         ).all()
     return JSONResponse(
         [

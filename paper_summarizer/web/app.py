@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -15,7 +16,7 @@ from .middleware import MaxContentSizeMiddleware
 from .metrics import MetricsMiddleware, metrics_response
 from .observability import RequestLoggingMiddleware
 from .ratelimit import RateLimitConfig, RateLimiter, RateLimitMiddleware
-from .security import CSRFMiddleware, SecurityHeadersMiddleware
+from .security import CSRFMiddleware, HTTPSRedirectMiddleware, SecurityHeadersMiddleware
 from .routes import router, STATIC_DIR
 import sentry_sdk
 from arq import create_pool
@@ -56,14 +57,49 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
 
     app = FastAPI(title="Paper Summarizer", lifespan=lifespan)
 
+    allowed_origins = []
+    for o in str(settings.get("CORS_ALLOWED_ORIGINS", "")).split(","):
+        origin = o.strip()
+        if origin and origin.startswith(("https://", "http://")):
+            allowed_origins.append(origin)
+        elif origin:
+            logger.warning("Ignoring invalid CORS origin (must start with http:// or https://): %s", origin)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
+    app_env = str(settings.get("APP_ENV", "development"))
+    if app_env == "production":
+        app.add_middleware(HTTPSRedirectMiddleware)
+
+    redis_url = str(settings.get("REDIS_URL", "")).strip()
     limiter = RateLimiter(
         RateLimitConfig(
             requests=int(settings.get("RATE_LIMIT_PER_MINUTE", 60)),
             window_seconds=int(settings.get("RATE_LIMIT_WINDOW_SECONDS", 60)),
             enabled=bool(settings.get("RATE_LIMIT_ENABLED", True)),
-        )
+        ),
+        redis_url=redis_url,
     )
-    app.add_middleware(RateLimitMiddleware, limiter=limiter, exempt_paths=("/static", "/health", "/metrics"))
+    auth_limiter = RateLimiter(
+        RateLimitConfig(
+            requests=int(settings.get("AUTH_RATE_LIMIT_PER_MINUTE", 20)),
+            window_seconds=60,
+            enabled=bool(settings.get("RATE_LIMIT_ENABLED", True)),
+        ),
+        redis_url=redis_url,
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        limiter=limiter,
+        exempt_paths=("/static", "/health", "/metrics"),
+        auth_limiter=auth_limiter,
+    )
     app.add_middleware(RequestLoggingMiddleware, logger=logger)
     app.add_middleware(CSRFMiddleware, exempt_paths=("/static", "/health"))
     app.add_middleware(SecurityHeadersMiddleware, app_env=str(settings.get("APP_ENV", "development")))

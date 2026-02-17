@@ -36,8 +36,18 @@ RUN if [ "$LOCAL_MODELS" = "true" ]; then \
       uv sync --frozen --no-dev; \
     fi
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Remove build-essential (only needed for compiling dependencies, not at runtime)
+RUN apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user
+RUN useradd --create-home --shell /bin/bash appuser
+
+# Create app directories and set ownership
+RUN mkdir -p uploads data && chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Railway injects PORT at runtime; default to 5000 for local dev
 ENV PORT=5000
