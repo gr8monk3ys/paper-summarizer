@@ -7,6 +7,8 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse, Response
 
+from sqlmodel import col, select
+
 from paper_summarizer.web.auth import get_current_user
 from paper_summarizer.web.db import get_session
 from paper_summarizer.web.deps import _get_engine
@@ -23,8 +25,12 @@ router = APIRouter()
 def synthesize_summaries(payload: SynthesisRequest, request: Request, current_user: User = Depends(get_current_user)) -> SynthesisResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
-        rows = [session.get(Summary, summary_id) for summary_id in payload.summary_ids]
-        rows = [row for row in rows if row and row.user_id == current_user.id]
+        rows = session.exec(
+            select(Summary).where(
+                col(Summary.id).in_(payload.summary_ids),
+                Summary.user_id == current_user.id,
+            )
+        ).all()
 
     if not rows:
         raise HTTPException(status_code=400, detail="No valid summaries provided")
