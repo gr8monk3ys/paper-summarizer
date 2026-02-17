@@ -77,9 +77,9 @@ class PaperSummarizer:
 
             # Use appropriate provider
             if self.provider == ModelProvider.LOCAL:
-                summary = self._summarize_local(text)
+                summary = self._summarize_local(text, num_sentences)
             else:
-                summary = self._summarize_together_ai(text)
+                summary = self._summarize_together_ai(text, num_sentences)
 
             if not summary:
                 raise ValueError("Failed to generate summary")
@@ -107,9 +107,18 @@ class PaperSummarizer:
         """
         try:
             with httpx.Client(timeout=30) as client:
-                response = client.get(url)
+                response = client.get(url, follow_redirects=True)
                 response.raise_for_status()
-            return self.summarize(response.text, num_sentences)
+
+            content_type = response.headers.get("content-type", "")
+            if isinstance(content_type, str) and "pdf" in content_type:
+                return self._summarize_pdf_bytes(response.content, num_sentences)
+
+            text = self._extract_text_from_html(response.text)
+            if not text or len(text.strip()) < 100:
+                text = response.text
+
+            return self.summarize(text, num_sentences)
         except httpx.TimeoutException as e:
             self.logger.error(f"Request timed out for URL {url}: {str(e)}")
             raise ValueError(f"Request timed out for URL {url}: {str(e)}")
@@ -144,15 +153,17 @@ class PaperSummarizer:
             path = Path(file_path)
             if not path.exists():
                 raise FileNotFoundError(f"File not found: {file_path}")
-                
-            if path.suffix.lower() not in ['.txt', '.md', '.rst']:
+
+            if path.suffix.lower() == '.pdf':
+                text = self._extract_text_from_pdf(file_path)
+            elif path.suffix.lower() in ['.txt', '.md', '.rst']:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    text = f.read()
+            else:
                 raise ValueError(f"Unsupported file format: {path.suffix}")
-                
-            with open(file_path, 'r', encoding='utf-8') as f:
-                text = f.read()
-                
+
             return self.summarize(text, num_sentences, keep_citations)
-            
+
         except FileNotFoundError:
             self.logger.error(f"File not found: {file_path}")
             raise
@@ -189,11 +200,12 @@ class PaperSummarizer:
         text = self._INJECTION_PATTERNS.sub("", text)
         return text
 
-    def _summarize_local(self, text: str) -> str:
+    def _summarize_local(self, text: str, num_sentences: int = 5) -> str:
         """Summarize text using local model.
 
         Args:
             text: Text to summarize
+            num_sentences: Number of sentences in the summary
 
         Returns:
             Summarized text
@@ -203,16 +215,19 @@ class PaperSummarizer:
         """
         text = self._sanitize_input(text)
         try:
-            result = self.model(text, max_length=150, min_length=50, do_sample=False)
+            max_length = min(num_sentences * 40, 512)
+            min_length = min(num_sentences * 15, max_length - 10)
+            result = self.model(text, max_length=max_length, min_length=min_length, do_sample=False)
             return result[0]['summary_text']
         except (RuntimeError, IndexError, TypeError) as e:
             raise ValueError(f"Local summarization failed: {str(e)}")
 
-    def _summarize_together_ai(self, text: str) -> str:
+    def _summarize_together_ai(self, text: str, num_sentences: int = 5) -> str:
         """Summarize text using Together AI.
 
         Args:
             text: Text to summarize
+            num_sentences: Number of sentences in the summary
 
         Returns:
             Summarized text
@@ -222,18 +237,86 @@ class PaperSummarizer:
         """
         text = self._sanitize_input(text)
         try:
-            prompt = f"Please summarize the following text:\n\n{text}\n\nSummary:"
+            prompt = (
+                "You are an expert academic research assistant. "
+                "Summarize the following research text in exactly "
+                f"{num_sentences} sentences. Focus on:\n"
+                "1. The main research question or objective\n"
+                "2. The methodology used\n"
+                "3. Key findings and results\n"
+                "4. Implications and conclusions\n\n"
+                "Be precise, use academic language, and preserve "
+                "important numerical results or statistical findings.\n\n"
+                f"Text:\n{text}\n\n"
+                "Summary:"
+            )
             response = together.Complete.create(
                 prompt=prompt,
                 model=self.model_type.value,
-                max_tokens=150,
-                temperature=0.3
+                max_tokens=1024,
+                temperature=0.2,
+                stop=["\n\n"],
             )
             return response['output']['choices'][0]['text'].strip()
         except httpx.HTTPError as e:
             raise ValueError(f"Together AI summarization failed: {str(e)}")
         except (RuntimeError, KeyError, TypeError, IndexError) as e:
             raise ValueError(f"Together AI summarization failed: {str(e)}")
+
+    def _extract_text_from_html(self, html: str) -> str:
+        """Extract article text from HTML, stripping navigation and boilerplate."""
+        from bs4 import BeautifulSoup
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Remove non-content elements
+        for tag in soup.find_all(["script", "style", "nav", "header", "footer", "aside", "form"]):
+            tag.decompose()
+
+        # Try to find article/main content first
+        article = soup.find("article") or soup.find("main") or soup.find(role="main")
+        if article:
+            return article.get_text(separator="\n", strip=True)
+
+        # Fallback: get all paragraph text
+        paragraphs = soup.find_all("p")
+        if paragraphs:
+            return "\n".join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 40)
+
+        return soup.get_text(separator="\n", strip=True)
+
+    def _extract_text_from_pdf(self, file_path: str) -> str:
+        """Extract text content from a PDF file."""
+        from pypdf import PdfReader
+
+        reader = PdfReader(file_path)
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+
+        if not pages:
+            raise ValueError("Could not extract text from PDF")
+
+        return "\n\n".join(pages)
+
+    def _summarize_pdf_bytes(self, pdf_bytes: bytes, num_sentences: int = 5) -> str:
+        """Summarize a PDF from raw bytes (e.g. fetched from URL)."""
+        from io import BytesIO
+        from pypdf import PdfReader
+
+        reader = PdfReader(BytesIO(pdf_bytes))
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+
+        if not pages:
+            raise ValueError("Could not extract text from PDF")
+
+        return self.summarize("\n\n".join(pages), num_sentences)
 
     def _remove_citations(self, text: str) -> str:
         """Remove citations from text.
