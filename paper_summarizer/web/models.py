@@ -19,7 +19,7 @@ class JobStatus(str, Enum):
 
 class Summary(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: str = Field(index=True)
+    user_id: str = Field(foreign_key="user.id", index=True)
     title: Optional[str] = None
     source_type: str
     source_value: Optional[str] = None
@@ -48,7 +48,7 @@ class User(SQLModel, table=True):
 
 class Job(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: str = Field(index=True)
+    user_id: str = Field(foreign_key="user.id", index=True)
     status: str
     payload_json: str
     result_json: Optional[str] = None
