@@ -225,10 +225,11 @@ class TestEvidence:
         assert response.status_code == 200
         data = response.json()
         assert data["summary_id"] == summary_id
-        # The generate endpoint splits on "." and takes up to 2 sentences
+        # The generate endpoint extracts claims from the summary
         assert len(data["items"]) > 0
         for item in data["items"]:
-            assert "Evidence placeholder" in item["evidence"]
+            assert item["claim"]
+            assert item["evidence"]
 
 
 # ---------------------------------------------------------------------------
@@ -294,7 +295,7 @@ class TestSynthesis:
         assert response.status_code == 200
         data = response.json()
         assert "consensus" in data
-        assert "Consensus Snapshot" in data["consensus"]
+        assert "Cross-Paper Synthesis" in data["consensus"]
         assert "sources" in data
         assert id1 in data["sources"]
         assert id2 in data["sources"]
