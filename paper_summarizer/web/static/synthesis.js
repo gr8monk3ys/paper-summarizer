@@ -2,16 +2,24 @@ async function loadSummaries() {
     const container = document.getElementById('summary-picker');
     const response = await authFetch('/api/summaries');
     if (!response.ok) {
-        container.innerHTML = '<p class="text-gray-500">Failed to load summaries.</p>';
+        container.textContent = '';
+        const failP = document.createElement('p');
+        failP.className = 'text-gray-500';
+        failP.textContent = 'Failed to load summaries.';
+        container.appendChild(failP);
         return;
     }
     const data = await response.json();
     if (!data.summaries || data.summaries.length === 0) {
-        container.innerHTML = '<p class="text-gray-500">No summaries available.</p>';
+        container.textContent = '';
+        const emptyP = document.createElement('p');
+        emptyP.className = 'text-gray-500';
+        emptyP.textContent = 'No summaries available.';
+        container.appendChild(emptyP);
         return;
     }
 
-    container.innerHTML = '';
+    container.textContent = '';
     data.summaries.forEach(item => {
         const label = document.createElement('label');
         label.className = 'summary-card flex items-start gap-3';
@@ -65,7 +73,7 @@ async function runSynthesis() {
         ? data.disagreements.join('\n')
         : 'No major disagreements detected.';
     if (data.citations && data.citations.length) {
-        citations.innerHTML = '';
+        citations.textContent = '';
         data.citations.forEach(item => {
             const div = document.createElement('div');
             div.className = 'text-sm';

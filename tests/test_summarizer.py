@@ -5,6 +5,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+import httpx
 from paper_summarizer.core.summarizer import PaperSummarizer, ModelType, ModelProvider
 from tests.config import TEST_DATA
 
@@ -58,9 +59,15 @@ class TestPaperSummarizer:
 
     def test_summarize_from_url(self, summarizer):
         """Test summarization from URL."""
-        with patch('requests.get') as mock_get:
-            mock_get.return_value.text = TEST_DATA['sample_text']
-            mock_get.return_value.raise_for_status = lambda: None
+        with patch('httpx.Client') as mock_client_cls:
+            mock_response = MagicMock()
+            mock_response.text = TEST_DATA['sample_text']
+            mock_response.raise_for_status = MagicMock()
+            mock_ctx = MagicMock()
+            mock_ctx.__enter__ = MagicMock(return_value=mock_ctx)
+            mock_ctx.__exit__ = MagicMock(return_value=False)
+            mock_ctx.get.return_value = mock_response
+            mock_client_cls.return_value = mock_ctx
 
             with patch.object(summarizer, '_summarize_local', return_value=TEST_DATA['sample_summary'].strip()):
                 summary = summarizer.summarize_from_url(TEST_DATA['sample_url'])
@@ -142,8 +149,13 @@ class TestPaperSummarizer:
     def test_error_handling(self, summarizer):
         """Test error handling."""
         # Test with invalid URL
-        with patch('requests.get', side_effect=Exception('Failed to fetch URL')):
-            with pytest.raises(ValueError, match='Failed to fetch content from URL'):
+        with patch('httpx.Client') as mock_client_cls:
+            mock_ctx = MagicMock()
+            mock_ctx.__enter__ = MagicMock(return_value=mock_ctx)
+            mock_ctx.__exit__ = MagicMock(return_value=False)
+            mock_ctx.get.side_effect = httpx.ConnectError('Failed to fetch URL')
+            mock_client_cls.return_value = mock_ctx
+            with pytest.raises(ValueError, match='Connection failed for URL'):
                 summarizer.summarize_from_url('https://invalid-url.com')
 
         # Test with invalid file path
