@@ -142,11 +142,65 @@ class RateLimiter:
         return allowed
 
 
+class LoginAttemptTracker:
+    """Track failed login attempts per email for brute-force protection.
+
+    After ``max_attempts`` failures within ``window_seconds``, further login
+    attempts for that email are blocked until the window expires.
+    """
+
+    def __init__(
+        self, max_attempts: int = 5, window_seconds: int = 900
+    ) -> None:
+        self.max_attempts = max_attempts
+        self.window_seconds = window_seconds
+        self._attempts: DefaultDict[str, Deque[float]] = defaultdict(deque)
+        self._call_count: int = 0
+
+    def _cleanup(self) -> None:
+        now = time.monotonic()
+        stale = [
+            k for k, v in self._attempts.items()
+            if not v or v[-1] < now - self.window_seconds
+        ]
+        for k in stale:
+            del self._attempts[k]
+
+    def is_blocked(self, email: str) -> bool:
+        """Return True if the email has exceeded the failure threshold."""
+        self._call_count += 1
+        if self._call_count % 100 == 0:
+            self._cleanup()
+
+        now = time.monotonic()
+        window_start = now - self.window_seconds
+        bucket = self._attempts[email]
+        while bucket and bucket[0] < window_start:
+            bucket.popleft()
+        return len(bucket) >= self.max_attempts
+
+    def record_failure(self, email: str) -> None:
+        """Record a failed login attempt."""
+        self._attempts[email].append(time.monotonic())
+
+    def reset(self, email: str) -> None:
+        """Clear recorded failures (e.g. after a successful login)."""
+        self._attempts.pop(email, None)
+
+
+# Module-level singleton so auth.py and middleware share the same instance.
+login_attempt_tracker = LoginAttemptTracker()
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, limiter: RateLimiter, exempt_paths: tuple[str, ...] = ("/static",)) -> None:
+    def __init__(self, app, limiter: RateLimiter, exempt_paths: tuple[str, ...] = ("/static",),
+                 auth_limiter: RateLimiter | None = None,
+                 auth_paths: tuple[str, ...] = ("/auth/login", "/auth/register")) -> None:
         super().__init__(app)
         self.limiter = limiter
         self.exempt_paths = exempt_paths
+        self.auth_limiter = auth_limiter
+        self.auth_paths = auth_paths
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -161,5 +215,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not await self.limiter.allow(client_ip):
             return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
+
+        # Stricter per-IP limit for auth endpoints
+        if self.auth_limiter and path in self.auth_paths:
+            if not await self.auth_limiter.allow(client_ip):
+                return JSONResponse(
+                    {"error": "Too many auth requests. Try again later."},
+                    status_code=429,
+                )
 
         return await call_next(request)

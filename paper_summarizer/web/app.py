@@ -77,15 +77,29 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
     if app_env == "production":
         app.add_middleware(HTTPSRedirectMiddleware)
 
+    redis_url = str(settings.get("REDIS_URL", "")).strip()
     limiter = RateLimiter(
         RateLimitConfig(
             requests=int(settings.get("RATE_LIMIT_PER_MINUTE", 60)),
             window_seconds=int(settings.get("RATE_LIMIT_WINDOW_SECONDS", 60)),
             enabled=bool(settings.get("RATE_LIMIT_ENABLED", True)),
         ),
-        redis_url=str(settings.get("REDIS_URL", "")).strip(),
+        redis_url=redis_url,
     )
-    app.add_middleware(RateLimitMiddleware, limiter=limiter, exempt_paths=("/static", "/health", "/metrics"))
+    auth_limiter = RateLimiter(
+        RateLimitConfig(
+            requests=int(settings.get("AUTH_RATE_LIMIT_PER_MINUTE", 20)),
+            window_seconds=60,
+            enabled=bool(settings.get("RATE_LIMIT_ENABLED", True)),
+        ),
+        redis_url=redis_url,
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        limiter=limiter,
+        exempt_paths=("/static", "/health", "/metrics"),
+        auth_limiter=auth_limiter,
+    )
     app.add_middleware(RequestLoggingMiddleware, logger=logger)
     app.add_middleware(CSRFMiddleware, exempt_paths=("/static", "/health"))
     app.add_middleware(SecurityHeadersMiddleware, app_env=str(settings.get("APP_ENV", "development")))

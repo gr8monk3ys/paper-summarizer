@@ -14,7 +14,7 @@ async function fetchSummaries() {
 
 function displaySummaries(summaries) {
     const list = document.getElementById('summaryList');
-    list.innerHTML = '';
+    list.textContent = '';
     summaries.forEach(summary => {
         const card = document.createElement('div');
         card.className = 'summary-card';
