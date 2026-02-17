@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 import jwt as pyjwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
@@ -34,6 +35,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+# In-memory token blacklist. Tokens expire naturally after their TTL,
+# so this set won't grow unboundedly in practice.
+_token_blacklist: set[str] = set()
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -45,7 +50,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 def create_access_token(subject: str, secret: str, expires_minutes: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
-    payload = {"sub": subject, "exp": expire}
+    payload = {"sub": subject, "exp": expire, "jti": str(uuid4())}
     return pyjwt.encode(payload, secret, algorithm="HS256")
 
 
@@ -114,6 +119,9 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> U
             options={"require": ["exp", "sub"]},
         )
         user_id = payload.get("sub")
+        jti = payload.get("jti")
+        if jti and jti in _token_blacklist:
+            raise HTTPException(status_code=401, detail="Token revoked")
     except ExpiredSignatureError as exc:
         logger.warning("Expired token from ip=%s", client_ip)
         raise HTTPException(status_code=401, detail="Token expired") from exc
@@ -130,6 +138,31 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> U
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
     return user
+
+
+@router.post("/logout")
+def logout(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    authorization: str = Header(),
+) -> dict:
+    raw_token = authorization.removeprefix("Bearer ").strip()
+    settings = _get_settings(request)
+    try:
+        payload = pyjwt.decode(
+            raw_token,
+            settings["SECRET_KEY"],
+            algorithms=["HS256"],
+            options={"require": ["exp", "sub"]},
+        )
+    except (ExpiredSignatureError, InvalidTokenError):
+        # Token already invalid — nothing to revoke.
+        return {"status": "ok"}
+
+    jti = payload.get("jti")
+    if jti:
+        _token_blacklist.add(jti)
+    return {"status": "ok"}
 
 
 @router.get("/me")
