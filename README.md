@@ -100,7 +100,8 @@ uvicorn paper_summarizer.web.app:app --reload --port 5000
   - `PUT /api/summaries/{summary_id}/evidence/{evidence_id}` to edit evidence
   - `DELETE /api/summaries/{summary_id}/evidence/{evidence_id}` to delete evidence
   - `POST /api/summaries/synthesize` to generate a consensus snapshot
-  - `GET /api/summaries/export` and `POST /api/summaries/import` for archive workflows
+  - `GET /api/summaries/export` and `POST /api/summaries/import` for archive workflows (`export` returns `{items,total,limit,offset}`)
+  - `GET /api/storage` and `POST /api/clear-data` for per-user storage usage and clear-all operations
   - `GET /api/summaries/synthesize/export?format=txt|md|pdf` to export synthesis output
   - `POST /api/jobs/summarize` and `GET /api/jobs/{job_id}` for background job processing
   - `GET /metrics` for Prometheus metrics (when enabled)

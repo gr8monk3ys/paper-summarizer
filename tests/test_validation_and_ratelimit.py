@@ -218,7 +218,7 @@ class TestRedisBackend:
         mock_client = MagicMock()
         mock_pipe = MagicMock()
         mock_client.pipeline.return_value = mock_pipe
-        mock_pipe.execute.side_effect = Exception("Redis pipeline error")
+        mock_pipe.execute.side_effect = OSError("Redis pipeline error")
 
         with patch.object(backend, "_get_client", return_value=mock_client):
             assert backend.allow("key", 5, 60) is False

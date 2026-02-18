@@ -376,12 +376,25 @@ class TestSummaryCRUD:
         assert get_resp.status_code == 404
 
     def test_export_summaries_bulk(self, client, auth_headers):
-        """GET /api/summaries/export is shadowed by the /api/summaries/{summary_id}
-        route (which is registered first and treats 'export' as a summary_id).
-        Verify the request returns 404 due to the route-ordering conflict."""
         _create_summary(client, auth_headers)
         response = client.get("/api/summaries/export", headers=auth_headers)
-        assert response.status_code == 404
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert data["total"] >= 1
+        assert data["limit"] == 1000
+        assert data["offset"] == 0
+        assert len(data["items"]) >= 1
+
+    def test_export_summaries_bulk_pagination(self, client, auth_headers):
+        _create_summary(client, auth_headers)
+        _create_summary(client, auth_headers)
+        response = client.get("/api/summaries/export?limit=1&offset=1", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["limit"] == 1
+        assert data["offset"] == 1
+        assert len(data["items"]) <= 1
 
     def test_import_summaries(self, client, auth_headers):
         payload = [
@@ -443,3 +456,38 @@ class TestSummaryCRUD:
         assert "uniqueModels" in data
         assert "lengthDistribution" in data
         assert "dailyActivity" in data
+
+
+class TestSettingsAndStorage:
+    def test_settings_roundtrip(self, client, auth_headers):
+        update_payload = {
+            "defaultModel": "deepseek-r1",
+            "summaryLength": 7,
+            "citationHandling": "keep",
+            "autoSave": False,
+        }
+        save_resp = client.post("/api/settings", json=update_payload, headers=auth_headers)
+        assert save_resp.status_code == 200
+        assert save_resp.json() == update_payload
+
+        get_resp = client.get("/api/settings", headers=auth_headers)
+        assert get_resp.status_code == 200
+        assert get_resp.json() == update_payload
+
+    def test_storage_usage_and_clear_data(self, client, auth_headers):
+        _create_summary(client, auth_headers)
+        _create_summary(client, auth_headers)
+
+        storage_resp = client.get("/api/storage", headers=auth_headers)
+        assert storage_resp.status_code == 200
+        storage = storage_resp.json()
+        assert storage["summaryCount"] >= 2
+        assert storage["usedBytes"] > 0
+
+        clear_resp = client.post("/api/clear-data", headers=auth_headers)
+        assert clear_resp.status_code == 200
+        assert clear_resp.json()["status"] == "cleared"
+
+        list_resp = client.get("/api/summaries", headers=auth_headers)
+        assert list_resp.status_code == 200
+        assert list_resp.json()["total"] == 0
