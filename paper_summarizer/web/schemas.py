@@ -46,6 +46,26 @@ class SummaryListResponse(BaseModel):
     offset: int
 
 
+
+
+class ExportSummaryItem(BaseModel):
+    id: str
+    title: Optional[str]
+    summary: str
+    source_type: str
+    source_value: Optional[str]
+    model_type: str
+    provider: str
+    num_sentences: int
+    created_at: datetime
+
+
+class ExportSummariesResponse(BaseModel):
+    items: list[ExportSummaryItem]
+    total: int
+    limit: int
+    offset: int
+
 class SummaryDetailResponse(BaseModel):
     id: str
     title: Optional[str]
@@ -82,6 +102,28 @@ class EvidenceListResponse(BaseModel):
     summary_id: str
     items: list[EvidenceItem]
 
+
+
+
+class UserSettingsResponse(BaseModel):
+    defaultModel: str
+    summaryLength: int
+    citationHandling: str
+    autoSave: bool
+
+
+class UserSettingsUpdateRequest(BaseModel):
+    defaultModel: str
+    summaryLength: int
+    citationHandling: str
+    autoSave: bool
+
+
+class StorageUsageResponse(BaseModel):
+    usedBytes: int
+    maxBytes: int
+    usedPercent: int
+    summaryCount: int
 
 class SynthesisRequest(BaseModel):
     summary_ids: list[str]

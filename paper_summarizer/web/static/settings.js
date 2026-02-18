@@ -22,13 +22,35 @@ async function loadModels() {
     }
 }
 
+
+async function loadStorage() {
+    try {
+        const response = await authFetch('/api/storage');
+        if (!response.ok) {
+            return;
+        }
+        const storage = await response.json();
+        const bar = document.getElementById('storageUsageBar');
+        const text = document.getElementById('storageUsageText');
+        if (bar) {
+            bar.style.width = `${storage.usedPercent}%`;
+        }
+        if (text) {
+            const usedMb = (storage.usedBytes / (1024 * 1024)).toFixed(2);
+            const maxMb = (storage.maxBytes / (1024 * 1024)).toFixed(0);
+            text.textContent = `${usedMb}MB used of ${maxMb}MB (${storage.summaryCount} summaries)`;
+        }
+    } catch (error) {
+        console.error('Failed to load storage usage:', error);
+    }
+}
+
 async function loadSettings() {
     try {
         const response = await authFetch('/api/settings');
         const settings = await response.json();
 
         document.getElementById('defaultModel').value = settings.defaultModel;
-        document.getElementById('apiKey').value = settings.apiKey || '';
         document.getElementById('summaryLength').value = settings.summaryLength;
         document.getElementById('summaryLengthValue').textContent = `${settings.summaryLength} sentences`;
         document.querySelector(`input[name="citations"][value="${settings.citationHandling}"]`).checked = true;
@@ -47,23 +69,9 @@ function setupSlider() {
     });
 }
 
-function toggleApiKey() {
-    const input = document.getElementById('apiKey');
-    const button = document.getElementById('toggleApiKeyButton');
-
-    if (input.type === 'password') {
-        input.type = 'text';
-        button.textContent = 'Hide';
-    } else {
-        input.type = 'password';
-        button.textContent = 'Show';
-    }
-}
-
 async function saveSettings() {
     const settings = {
         defaultModel: document.getElementById('defaultModel').value,
-        apiKey: document.getElementById('apiKey').value,
         summaryLength: parseInt(document.getElementById('summaryLength').value, 10),
         citationHandling: document.querySelector('input[name="citations"]:checked').value,
         autoSave: document.getElementById('autoSave').checked
@@ -97,12 +105,13 @@ function confirmClearData() {
 
 async function clearData() {
     try {
-        const response = await fetch('/api/clear-data', {
+        const response = await authFetch('/api/clear-data', {
             method: 'POST'
         });
 
         if (response.ok) {
             alert('All data cleared successfully');
+            await loadStorage();
         } else {
             throw new Error('Failed to clear data');
         }
@@ -115,15 +124,12 @@ async function clearData() {
 document.addEventListener('DOMContentLoaded', () => {
     loadModels();
     loadSettings();
+    loadStorage();
     setupSlider();
 
-    const toggleButton = document.getElementById('toggleApiKeyButton');
     const clearButton = document.getElementById('clearDataButton');
     const saveButton = document.getElementById('saveSettingsButton');
 
-    if (toggleButton) {
-        toggleButton.addEventListener('click', toggleApiKey);
-    }
     if (clearButton) {
         clearButton.addEventListener('click', confirmClearData);
     }
