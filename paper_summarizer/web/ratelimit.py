@@ -7,13 +7,23 @@ import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Deque, DefaultDict
+from typing import Any, Deque, DefaultDict
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
+
+
+def _redis_exception_types() -> tuple[type[BaseException], ...]:
+    """Return redis-related exception classes without hard dependency at import time."""
+    try:
+        import redis as redis_lib
+
+        return (redis_lib.RedisError, OSError, TimeoutError)
+    except ImportError:
+        return (OSError, TimeoutError)
 
 
 @dataclass
@@ -67,9 +77,9 @@ class RedisBackend:
 
     def __init__(self, redis_url: str) -> None:
         self._redis_url = redis_url
-        self._redis = None
+        self._redis: Any | None = None
 
-    def _get_client(self):
+    def _get_client(self) -> Any | None:
         if self._redis is None:
             try:
                 import redis as redis_lib
@@ -78,7 +88,7 @@ class RedisBackend:
                     self._redis_url, decode_responses=True
                 )
                 self._redis.ping()
-            except Exception:
+            except _redis_exception_types():
                 logger.warning("Redis rate-limit backend unavailable, connection failed")
                 self._redis = None
         return self._redis
@@ -99,9 +109,9 @@ class RedisBackend:
             pipe.zadd(redis_key, {str(now): now})
             pipe.expire(redis_key, window_seconds)
             results = pipe.execute()
-            current_count = results[1]
+            current_count = int(results[1])
             return current_count < max_requests
-        except Exception:
+        except _redis_exception_types():
             # Fail closed: deny requests when rate limiting is degraded.
             # It is safer to reject some legitimate traffic than to allow
             # unbounded requests that could overwhelm downstream services.
@@ -112,6 +122,8 @@ class RedisBackend:
 class RateLimiter:
     def __init__(self, config: RateLimitConfig, redis_url: str = "") -> None:
         self.config = config
+        self._backend: RedisBackend | InMemoryBackend
+        self._fallback: InMemoryBackend | None
         if redis_url:
             self._backend = RedisBackend(redis_url)
             self._fallback = InMemoryBackend()

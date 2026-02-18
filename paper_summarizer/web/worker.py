@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,28 +12,10 @@ from paper_summarizer.core.summarizer import ModelProvider, ModelType, PaperSumm
 from paper_summarizer.web.config import load_settings
 from paper_summarizer.web.db import create_db_engine, get_session
 from paper_summarizer.web.models import Job, JobStatus, Summary
+from paper_summarizer.web.job_helpers import complete_job, resolve_summary_options
 from paper_summarizer.web.validation import validate_url
 
 logger = logging.getLogger(__name__)
-_MAX_ERROR_LENGTH = 500
-
-
-def _complete_job(
-    session,
-    job: Job,
-    result_json: str | None = None,
-    error: str | None = None,
-) -> None:
-    """Set a job to its terminal state (COMPLETE or FAILED)."""
-    if error is not None:
-        job.status = JobStatus.FAILED
-        job.error = error[:_MAX_ERROR_LENGTH]
-    else:
-        job.status = JobStatus.COMPLETE
-        job.result_json = result_json
-    job.completed_at = datetime.now(timezone.utc)
-    session.add(job)
-    session.commit()
 
 
 async def run_summary_job(ctx, job_id: str) -> None:
@@ -52,20 +33,12 @@ async def run_summary_job(ctx, job_id: str) -> None:
             payload = json.loads(job.payload_json)
         except json.JSONDecodeError:
             logger.error("Corrupted payload_json for job %s", job_id)
-            _complete_job(session, job, error="Corrupted job payload data")
+            complete_job(session, job, error="Corrupted job payload data")
             return
 
     try:
         source_type = payload.get("source_type")
-        num_sentences = payload.get("num_sentences") or settings["DEFAULT_NUM_SENTENCES"]
-        model_type = payload.get("model_type") or settings["DEFAULT_MODEL"]
-        provider = payload.get("provider") or settings["DEFAULT_PROVIDER"]
-        keep_citations = bool(payload.get("keep_citations"))
-
-        if num_sentences < settings["MIN_SENTENCES"] or num_sentences > settings["MAX_SENTENCES"]:
-            raise ValueError(
-                f'Number of sentences must be between {settings["MIN_SENTENCES"]} and {settings["MAX_SENTENCES"]}'
-            )
+        num_sentences, model_type, provider, keep_citations = resolve_summary_options(payload, settings)
 
         summarizer = PaperSummarizer(
             model_type=ModelType(model_type),
@@ -118,25 +91,25 @@ async def run_summary_job(ctx, job_id: str) -> None:
                         "created_at": summary_record.created_at.isoformat(),
                     }
                 )
-                _complete_job(session, job, result_json=result_payload)
+                complete_job(session, job, result_json=result_payload)
     except (ValueError, KeyError, TypeError) as exc:
         logger.error("Job %s failed: %s", job_id, exc)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                _complete_job(session, job, error=str(exc))
+                complete_job(session, job, error=str(exc))
     except HTTPException as exc:
         logger.error("Job %s failed with HTTP %s: %s", job_id, exc.status_code, exc.detail)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                _complete_job(session, job, error=str(exc.detail))
+                complete_job(session, job, error=str(exc.detail))
     except (SQLAlchemyError, OSError, RuntimeError) as exc:
         logger.exception("Job %s failed unexpectedly", job_id)
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:
-                _complete_job(session, job, error=str(exc))
+                complete_job(session, job, error=str(exc))
 
 
 async def startup(ctx) -> None:

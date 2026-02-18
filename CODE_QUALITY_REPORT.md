@@ -1,5 +1,7 @@
 # Code Quality Report: Paper Summarizer
 
+> ⚠️ **Status note (2026-02-18):** Parts of this report are stale versus current code. Specifically, token revocation/logout now exists (`/auth/logout` + JTI blacklist), `Summary.user_id` and `Job.user_id` include model-level foreign keys, and `/api/analytics` uses SQL aggregation rather than loading all summaries into memory. Treat this file as historical context unless re-audited.
+
 **Date**: 2026-02-17
 **Branch**: claude/evaluate-production-readiness-HwQ0x
 **Previous Report**: 2026-02-09
@@ -39,19 +41,19 @@ Since the last report (2026-02-09), all 7 original blocking issues have been res
 
 ### Blocking (fix before production)
 
-#### 1. No Token Revocation or Refresh — HIGH
+#### 1. Stateless Session Hardening Still Incomplete — HIGH
 
-`paper_summarizer/web/auth.py` — JWT tokens cannot be invalidated after issuance. There is no logout endpoint on the backend; the frontend simply clears `localStorage`. A stolen token remains valid for the full 24-hour expiration window.
+`paper_summarizer/web/auth.py` now has `/auth/logout` with a JTI blacklist, but revocation is still in-memory and not shared across replicas/restarts. Frontend token storage remains in `localStorage`.
 
-**Impact**: Compromised tokens cannot be revoked.
-**Fix**: Implement token blacklist in Redis, add `/auth/logout` endpoint, reduce access token TTL to 15-30 minutes, add refresh token rotation.
+**Impact**: Revocation durability and multi-instance consistency are limited.
+**Fix**: Move blacklist to Redis, adopt short-lived access + refresh token rotation, and consider httpOnly cookies.
 
-#### 2. Missing Database Foreign Key Constraints — HIGH
+#### 2. Migration/Application Drift Risk — MEDIUM
 
-`paper_summarizer/web/models.py` — `Summary.user_id` and `Job.user_id` have no foreign key constraint to `User.id`. `SummaryEvidence.summary_id` has a FK but no `ondelete="CASCADE"`.
+Model-level foreign keys now exist and migrations have been added, but the report body can drift from implementation quickly.
 
-**Impact**: Orphan records accumulate if users or summaries are deleted. No referential integrity at the DB level.
-**Fix**: Add an Alembic migration with `op.create_foreign_key()` for both tables, add `ondelete="CASCADE"` to evidence FK.
+**Impact**: Operators can make incorrect deployment assumptions from stale audit text.
+**Fix**: Re-run and regenerate this report as part of release checklist.
 
 #### 3. Unbounded Query Results — MEDIUM
 
@@ -64,11 +66,11 @@ Since the last report (2026-02-09), all 7 original blocking issues have been res
 
 ### Non-Blocking (should fix)
 
-#### 4. Bare `except Exception` in Rate Limiter — MEDIUM
+#### 4. Rate Limiter Failure-Mode Consistency — MEDIUM
 
-`paper_summarizer/web/ratelimit.py:81,104` — catches all exceptions including `SystemExit`/`KeyboardInterrupt`. Redis failures at line 81 fail open (allowing unlimited requests), while line 104 fails closed.
+Rate limiter exception handling is now narrowed to redis/network-related errors, but the backend still intentionally uses mixed behavior: connect failures fail-open while pipeline failures fail-closed.
 
-**Fix**: Catch `(ConnectionError, TimeoutError, redis.RedisError)` specifically. Choose consistent fail-open or fail-closed behavior.
+**Fix**: Decide and document a single desired degradation mode per environment (e.g., fail-open in dev, fail-closed in prod).
 
 #### 5. Code Duplication Across Jobs and Worker — MEDIUM
 

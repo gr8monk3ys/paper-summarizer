@@ -131,7 +131,6 @@ class TestRoutes:
         """Test saving user settings."""
         settings = {
             'defaultModel': ModelType.T5_SMALL.value,
-            'apiKey': 'test_key',
             'summaryLength': 5,
             'citationHandling': 'remove',
             'autoSave': True
@@ -139,7 +138,10 @@ class TestRoutes:
         response = client.post('/api/settings', json=settings, headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert data['status'] == 'success'
+        assert data['defaultModel'] == ModelType.T5_SMALL.value
+        assert data['summaryLength'] == 5
+        assert data['citationHandling'] == 'remove'
+        assert data['autoSave'] is True
 
     def test_library_route(self, client):
         """Test the library route."""

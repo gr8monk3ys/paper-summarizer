@@ -29,18 +29,6 @@
                     </select>
                 </div>
                 
-                <!-- API Key -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-200 mb-2">Together AI API Key</label>
-                    <div class="flex">
-                        <input type="password" id="apiKey" placeholder="Enter your API key" 
-                               class="form-input rounded-r-none">
-                        <button id="toggleApiKeyButton" class="px-4 py-2 bg-gray-800 border border-l-0 rounded-r-lg hover:bg-gray-700">
-                            Show
-                        </button>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-1">Required for cloud-based models</p>
-                </div>
             </div>
         </div>
         
@@ -97,9 +85,9 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-200 mb-2">Storage Usage</label>
                     <div class="w-full bg-gray-700 rounded-full h-2.5">
-                        <div class="bg-orange-500 h-2.5 rounded-full" style="width: 45%"></div>
+                        <div id="storageUsageBar" class="bg-orange-500 h-2.5 rounded-full" style="width: 0%"></div>
                     </div>
-                    <p class="text-sm text-gray-500 mt-1">450MB used of 1GB</p>
+                    <p id="storageUsageText" class="text-sm text-gray-500 mt-1">Loading storage usage...</p>
                 </div>
                 
                 <!-- Clear Data -->

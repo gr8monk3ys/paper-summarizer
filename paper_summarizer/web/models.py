@@ -55,3 +55,13 @@ class Job(SQLModel, table=True):
     error: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
+
+
+class UserSettings(SQLModel, table=True):
+    user_id: str = Field(primary_key=True, foreign_key="user.id")
+    default_model: str
+    summary_length: int
+    citation_handling: str = "remove"
+    auto_save: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
