@@ -4,7 +4,7 @@ import os
 
 import uvicorn
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     env = os.getenv("APP_ENV", "development")
     uvicorn.run(
         "paper_summarizer.web.app:app",

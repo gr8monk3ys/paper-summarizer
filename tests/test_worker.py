@@ -64,6 +64,7 @@ def _get_job(engine, job_id):
 
 # ---------- 1. text source – success path ----------
 
+
 @patch("paper_summarizer.web.worker.PaperSummarizer")
 def test_run_summary_job_text_success(mock_cls, db_setup):
     engine, settings = db_setup
@@ -110,6 +111,7 @@ def test_run_summary_job_text_success(mock_cls, db_setup):
 
 # ---------- 2. URL source – success path ----------
 
+
 @patch("paper_summarizer.web.worker.validate_url")
 @patch("paper_summarizer.web.worker.PaperSummarizer")
 def test_run_summary_job_url_success(mock_cls, mock_validate, db_setup):
@@ -153,6 +155,7 @@ def test_run_summary_job_url_success(mock_cls, mock_validate, db_setup):
 
 # ---------- 3. non-existent job_id – early return ----------
 
+
 def test_run_summary_job_nonexistent_job(db_setup):
     engine, settings = db_setup
     ctx = _make_ctx(engine, settings)
@@ -163,6 +166,7 @@ def test_run_summary_job_nonexistent_job(db_setup):
 
 
 # ---------- 4. already-completed job – early return ----------
+
 
 def test_run_summary_job_already_completed(db_setup):
     engine, settings = db_setup
@@ -179,6 +183,7 @@ def test_run_summary_job_already_completed(db_setup):
 
 
 # ---------- 5. summarizer raises ValueError – job fails ----------
+
 
 @patch("paper_summarizer.web.worker.PaperSummarizer")
 def test_run_summary_job_value_error(mock_cls, db_setup):
@@ -207,6 +212,7 @@ def test_run_summary_job_value_error(mock_cls, db_setup):
 
 
 # ---------- 6. validate_url raises HTTPException – job fails ----------
+
 
 @patch("paper_summarizer.web.worker.validate_url")
 @patch("paper_summarizer.web.worker.PaperSummarizer")
@@ -237,6 +243,7 @@ def test_run_summary_job_http_exception(mock_cls, mock_validate, db_setup):
 
 # ---------- 7. unsupported source_type – job fails ----------
 
+
 @patch("paper_summarizer.web.worker.PaperSummarizer")
 def test_run_summary_job_unsupported_source_type(mock_cls, db_setup):
     engine, settings = db_setup
@@ -258,6 +265,7 @@ def test_run_summary_job_unsupported_source_type(mock_cls, db_setup):
 
 
 # ---------- 8. missing text field – job fails ----------
+
 
 @patch("paper_summarizer.web.worker.PaperSummarizer")
 def test_run_summary_job_missing_text(mock_cls, db_setup):
@@ -282,6 +290,7 @@ def test_run_summary_job_missing_text(mock_cls, db_setup):
 
 # ---------- 9. num_sentences out of range – job fails ----------
 
+
 @patch("paper_summarizer.web.worker.PaperSummarizer")
 def test_run_summary_job_num_sentences_out_of_range(mock_cls, db_setup):
     engine, settings = db_setup
@@ -305,6 +314,7 @@ def test_run_summary_job_num_sentences_out_of_range(mock_cls, db_setup):
 
 # ---------- 10. startup populates ctx ----------
 
+
 @patch("paper_summarizer.web.worker.create_db_engine")
 @patch("paper_summarizer.web.worker.load_settings")
 def test_startup_populates_ctx(mock_load_settings, mock_create_engine):
@@ -324,6 +334,7 @@ def test_startup_populates_ctx(mock_load_settings, mock_create_engine):
 
 # ---------- 11. shutdown clears ctx ----------
 
+
 def test_shutdown_clears_ctx():
     ctx = {"engine": "something", "settings": {"a": 1}}
     asyncio.run(shutdown(ctx))
@@ -331,6 +342,7 @@ def test_shutdown_clears_ctx():
 
 
 # ---------- 12. WorkerSettings class attributes ----------
+
 
 def test_worker_settings_attributes():
     assert run_summary_job in WorkerSettings.functions

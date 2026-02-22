@@ -26,8 +26,14 @@ def _make_summary(summary_id: str, title: str, text: str) -> Summary:
 
 def test_synthesize_heuristic_builds_consensus_and_citations() -> None:
     rows = [
-        _make_summary("s1", "Paper A", "Machine learning improves outcomes. It reduces cost."),
-        _make_summary("s2", "Paper B", "Machine learning improves outcomes. It increases accuracy."),
+        _make_summary(
+            "s1", "Paper A", "Machine learning improves outcomes. It reduces cost."
+        ),
+        _make_summary(
+            "s2",
+            "Paper B",
+            "Machine learning improves outcomes. It increases accuracy.",
+        ),
     ]
 
     result = _synthesize_heuristic(rows)
@@ -45,7 +51,7 @@ def test_synthesize_llm_parses_markdown_json(mock_create) -> None:
         "output": {
             "choices": [
                 {
-                    "text": "```json\n{\"consensus\": \"Unified finding\", \"disagreements\": []}\n```"
+                    "text": '```json\n{"consensus": "Unified finding", "disagreements": []}\n```'
                 }
             ]
         }

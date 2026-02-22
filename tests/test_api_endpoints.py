@@ -16,16 +16,17 @@ from tests.config import TEST_CONFIG, TEST_DATA
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def setup_test_env():
-    os.environ['TESTING'] = 'true'
-    os.environ['TOGETHER_API_KEY'] = 'test_key'
+    os.environ["TESTING"] = "true"
+    os.environ["TOGETHER_API_KEY"] = "test_key"
     with tempfile.TemporaryDirectory() as temp_dir:
-        TEST_CONFIG['UPLOAD_FOLDER'] = temp_dir
-        TEST_CONFIG['DATABASE_URL'] = f"sqlite:///{temp_dir}/test.db"
+        TEST_CONFIG["UPLOAD_FOLDER"] = temp_dir
+        TEST_CONFIG["DATABASE_URL"] = f"sqlite:///{temp_dir}/test.db"
         yield
-    os.environ.pop('TESTING', None)
-    os.environ.pop('TOGETHER_API_KEY', None)
+    os.environ.pop("TESTING", None)
+    os.environ.pop("TOGETHER_API_KEY", None)
 
 
 @pytest.fixture
@@ -52,28 +53,29 @@ def auth_headers(client):
 
 def _create_summary(client, auth_headers):
     """Helper: create a summary via the /summarize endpoint with a mocked summarizer."""
-    with patch('paper_summarizer.web.routes.summaries.PaperSummarizer') as mock_cls:
+    with patch("paper_summarizer.web.routes.summaries.PaperSummarizer") as mock_cls:
         mock_instance = MagicMock()
-        mock_instance.summarize.return_value = TEST_DATA['sample_summary']
+        mock_instance.summarize.return_value = TEST_DATA["sample_summary"]
         mock_cls.return_value = mock_instance
         response = client.post(
-            '/summarize',
+            "/summarize",
             data={
-                'source_type': 'text',
-                'text': TEST_DATA['sample_text'],
-                'num_sentences': 5,
-                'model_type': 't5-small',
-                'provider': 'together_ai',
+                "source_type": "text",
+                "text": TEST_DATA["sample_text"],
+                "num_sentences": 5,
+                "model_type": "t5-small",
+                "provider": "together_ai",
             },
             headers=auth_headers,
         )
     assert response.status_code == 200, response.text
-    return response.json()['summary_id']
+    return response.json()["summary_id"]
 
 
 # ---------------------------------------------------------------------------
 # 1. Auth endpoint tests
 # ---------------------------------------------------------------------------
+
 
 class TestAuth:
     def test_register_valid(self, client):
@@ -138,6 +140,7 @@ class TestAuth:
 # ---------------------------------------------------------------------------
 # 2. Evidence endpoint tests
 # ---------------------------------------------------------------------------
+
 
 class TestEvidence:
     def test_create_evidence(self, client, auth_headers):
@@ -236,6 +239,7 @@ class TestEvidence:
 # 3. Export endpoint tests
 # ---------------------------------------------------------------------------
 
+
 class TestExport:
     def test_export_txt(self, client, auth_headers):
         summary_id = _create_summary(client, auth_headers)
@@ -244,9 +248,11 @@ class TestExport:
             headers=auth_headers,
         )
         assert response.status_code == 200
-        assert TEST_DATA['sample_summary'] in response.text
+        assert TEST_DATA["sample_summary"] in response.text
         assert "text/plain" in response.headers["content-type"]
-        assert f"summary_{summary_id}.txt" in response.headers.get("content-disposition", "")
+        assert f"summary_{summary_id}.txt" in response.headers.get(
+            "content-disposition", ""
+        )
 
     def test_export_md(self, client, auth_headers):
         summary_id = _create_summary(client, auth_headers)
@@ -256,8 +262,10 @@ class TestExport:
         )
         assert response.status_code == 200
         assert "# Summary" in response.text
-        assert TEST_DATA['sample_summary'] in response.text
-        assert f"summary_{summary_id}.md" in response.headers.get("content-disposition", "")
+        assert TEST_DATA["sample_summary"] in response.text
+        assert f"summary_{summary_id}.md" in response.headers.get(
+            "content-disposition", ""
+        )
 
     def test_export_pdf(self, client, auth_headers):
         summary_id = _create_summary(client, auth_headers)
@@ -267,7 +275,9 @@ class TestExport:
         )
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/pdf"
-        assert f"summary_{summary_id}.pdf" in response.headers.get("content-disposition", "")
+        assert f"summary_{summary_id}.pdf" in response.headers.get(
+            "content-disposition", ""
+        )
         # PDF files start with %PDF
         assert response.content[:5] == b"%PDF-"
 
@@ -282,6 +292,7 @@ class TestExport:
 # ---------------------------------------------------------------------------
 # 4. Synthesis endpoint tests
 # ---------------------------------------------------------------------------
+
 
 class TestSynthesis:
     def test_synthesize_summaries(self, client, auth_headers):
@@ -323,6 +334,7 @@ class TestSynthesis:
 # 5. Summary CRUD endpoint tests
 # ---------------------------------------------------------------------------
 
+
 class TestSummaryCRUD:
     def test_list_summaries(self, client, auth_headers):
         _create_summary(client, auth_headers)
@@ -346,7 +358,7 @@ class TestSummaryCRUD:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == summary_id
-        assert data["summary"] == TEST_DATA['sample_summary']
+        assert data["summary"] == TEST_DATA["sample_summary"]
         assert data["source_type"] == "text"
         assert data["model_type"] == "t5-small"
         assert data["provider"] == "together_ai"
@@ -389,7 +401,9 @@ class TestSummaryCRUD:
     def test_export_summaries_bulk_pagination(self, client, auth_headers):
         _create_summary(client, auth_headers)
         _create_summary(client, auth_headers)
-        response = client.get("/api/summaries/export?limit=1&offset=1", headers=auth_headers)
+        response = client.get(
+            "/api/summaries/export?limit=1&offset=1", headers=auth_headers
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["limit"] == 1
@@ -466,7 +480,9 @@ class TestSettingsAndStorage:
             "citationHandling": "keep",
             "autoSave": False,
         }
-        save_resp = client.post("/api/settings", json=update_payload, headers=auth_headers)
+        save_resp = client.post(
+            "/api/settings", json=update_payload, headers=auth_headers
+        )
         assert save_resp.status_code == 200
         assert save_resp.json() == update_payload
 
