@@ -4,6 +4,7 @@ Revision ID: 0002_jobs
 Revises: 0001_initial
 Create Date: 2026-02-06
 """
+
 from __future__ import annotations
 
 from alembic import op

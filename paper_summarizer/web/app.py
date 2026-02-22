@@ -28,12 +28,16 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
     settings = load_settings(settings_overrides)
     logger = logging.getLogger("paper_summarizer")
     if not logger.handlers:
-        log_level = getattr(logging, str(settings.get("LOG_LEVEL", "INFO")).upper(), logging.INFO)
+        log_level = getattr(
+            logging, str(settings.get("LOG_LEVEL", "INFO")).upper(), logging.INFO
+        )
         logging.basicConfig(level=log_level)
 
     sentry_dsn = str(settings.get("SENTRY_DSN", "")).strip()
     if sentry_dsn:
-        sentry_sdk.init(dsn=sentry_dsn, environment=str(settings.get("APP_ENV", "development")))
+        sentry_sdk.init(
+            dsn=sentry_dsn, environment=str(settings.get("APP_ENV", "development"))
+        )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -63,7 +67,10 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
         if origin and origin.startswith(("https://", "http://")):
             allowed_origins.append(origin)
         elif origin:
-            logger.warning("Ignoring invalid CORS origin (must start with http:// or https://): %s", origin)
+            logger.warning(
+                "Ignoring invalid CORS origin (must start with http:// or https://): %s",
+                origin,
+            )
 
     app.add_middleware(
         CORSMiddleware,
@@ -102,7 +109,9 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
     )
     app.add_middleware(RequestLoggingMiddleware, logger=logger)
     app.add_middleware(CSRFMiddleware, exempt_paths=("/static", "/health"))
-    app.add_middleware(SecurityHeadersMiddleware, app_env=str(settings.get("APP_ENV", "development")))
+    app.add_middleware(
+        SecurityHeadersMiddleware, app_env=str(settings.get("APP_ENV", "development"))
+    )
     app.add_middleware(
         MaxContentSizeMiddleware,
         max_bytes=int(settings.get("MAX_CONTENT_LENGTH", 16 * 1024 * 1024)),
@@ -119,7 +128,9 @@ def create_app(settings_overrides: dict | None = None) -> FastAPI:
         app.add_api_route("/metrics", metrics_response, methods=["GET"])
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
         request_id = getattr(request.state, "request_id", None)
         payload = {"error": exc.detail}
         if request_id:

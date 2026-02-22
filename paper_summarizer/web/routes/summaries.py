@@ -6,7 +6,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import JSONResponse
 from sqlmodel import delete, func, select
 
@@ -14,7 +23,13 @@ from paper_summarizer.core.summarizer import PaperSummarizer, ModelType, ModelPr
 from paper_summarizer.web.auth import get_current_user
 from paper_summarizer.web.db import get_session
 from paper_summarizer.web.deps import _get_settings, _get_engine, _allowed_file
-from paper_summarizer.web.models import Job, Summary, SummaryEvidence, User, UserSettings
+from paper_summarizer.web.models import (
+    Job,
+    Summary,
+    SummaryEvidence,
+    User,
+    UserSettings,
+)
 from paper_summarizer.web.validation import validate_upload, validate_url
 from paper_summarizer.web.schemas import (
     ExportSummariesResponse,
@@ -49,10 +64,15 @@ async def summarize(
     model_type = model_type or settings["DEFAULT_MODEL"]
     provider = provider or settings["DEFAULT_PROVIDER"]
     keep_citations_flag = keep_citations.lower() == "true"
-    if provider == ModelProvider.LOCAL.value and not settings.get("LOCAL_MODELS_ENABLED", True):
+    if provider == ModelProvider.LOCAL.value and not settings.get(
+        "LOCAL_MODELS_ENABLED", True
+    ):
         raise HTTPException(status_code=400, detail="Local models are disabled")
 
-    if num_sentences < settings["MIN_SENTENCES"] or num_sentences > settings["MAX_SENTENCES"]:
+    if (
+        num_sentences < settings["MIN_SENTENCES"]
+        or num_sentences > settings["MAX_SENTENCES"]
+    ):
         raise HTTPException(
             status_code=400,
             detail=f'Number of sentences must be between {settings["MIN_SENTENCES"]} and {settings["MAX_SENTENCES"]}',
@@ -93,7 +113,9 @@ async def summarize(
         validate_upload(contents, filename, settings)
         filepath.write_bytes(contents)
         try:
-            summary = summarizer.summarize_from_file(str(filepath), num_sentences, keep_citations_flag)
+            summary = summarizer.summarize_from_file(
+                str(filepath), num_sentences, keep_citations_flag
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         finally:
@@ -139,7 +161,9 @@ async def summarize(
 
 
 @router.get("/api/settings", response_model=UserSettingsResponse, tags=["meta"])
-def get_settings(request: Request, current_user: User = Depends(get_current_user)) -> UserSettingsResponse:
+def get_settings(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> UserSettingsResponse:
     settings = _get_settings(request)
     engine = _get_engine(request)
 
@@ -169,14 +193,19 @@ def save_settings(
     current_user: User = Depends(get_current_user),
 ) -> UserSettingsResponse:
     settings = _get_settings(request)
-    if payload.summaryLength < settings["MIN_SENTENCES"] or payload.summaryLength > settings["MAX_SENTENCES"]:
+    if (
+        payload.summaryLength < settings["MIN_SENTENCES"]
+        or payload.summaryLength > settings["MAX_SENTENCES"]
+    ):
         raise HTTPException(
             status_code=400,
             detail=f'Summary length must be between {settings["MIN_SENTENCES"]} and {settings["MAX_SENTENCES"]}',
         )
 
     if payload.citationHandling not in {"keep", "remove"}:
-        raise HTTPException(status_code=400, detail="citationHandling must be 'keep' or 'remove'")
+        raise HTTPException(
+            status_code=400, detail="citationHandling must be 'keep' or 'remove'"
+        )
 
     engine = _get_engine(request)
     with get_session(engine) as session:
@@ -211,12 +240,16 @@ def save_settings(
 
 
 @router.get("/api/storage", response_model=StorageUsageResponse, tags=["meta"])
-def get_storage_usage(request: Request, current_user: User = Depends(get_current_user)) -> StorageUsageResponse:
+def get_storage_usage(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> StorageUsageResponse:
     settings = _get_settings(request)
     max_bytes = int(settings["STORAGE_LIMIT_BYTES"])
     engine = _get_engine(request)
     with get_session(engine) as session:
-        rows = session.exec(select(Summary.summary).where(Summary.user_id == current_user.id)).all()
+        rows = session.exec(
+            select(Summary.summary).where(Summary.user_id == current_user.id)
+        ).all()
 
     used_bytes = sum(len((value or "").encode("utf-8")) for value in rows)
     summary_count = len(rows)
@@ -230,12 +263,18 @@ def get_storage_usage(request: Request, current_user: User = Depends(get_current
 
 
 @router.post("/api/clear-data", response_class=JSONResponse, tags=["summaries"])
-def clear_data(request: Request, current_user: User = Depends(get_current_user)) -> JSONResponse:
+def clear_data(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> JSONResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
-        summary_ids = session.exec(select(Summary.id).where(Summary.user_id == current_user.id)).all()
+        summary_ids = session.exec(
+            select(Summary.id).where(Summary.user_id == current_user.id)
+        ).all()
         for summary_id in summary_ids:
-            session.exec(delete(SummaryEvidence).where(SummaryEvidence.summary_id == summary_id))
+            session.exec(
+                delete(SummaryEvidence).where(SummaryEvidence.summary_id == summary_id)
+            )
         session.exec(delete(Summary).where(Summary.user_id == current_user.id))
         session.exec(delete(Job).where(Job.user_id == current_user.id))
         session.commit()
@@ -244,41 +283,47 @@ def clear_data(request: Request, current_user: User = Depends(get_current_user))
 
 
 @router.get("/api/analytics", response_class=JSONResponse, tags=["meta"])
-def get_analytics(request: Request, current_user: User = Depends(get_current_user)) -> JSONResponse:
+def get_analytics(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> JSONResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         # Total count
         total = session.exec(
-            select(func.count()).select_from(Summary).where(Summary.user_id == current_user.id)
+            select(func.count())
+            .select_from(Summary)
+            .where(Summary.user_id == current_user.id)
         ).one()
 
         # Model usage: GROUP BY model_type
         model_rows = session.exec(
-            select(Summary.model_type, func.count()).where(
-                Summary.user_id == current_user.id
-            ).group_by(Summary.model_type)
+            select(Summary.model_type, func.count())
+            .where(Summary.user_id == current_user.id)
+            .group_by(Summary.model_type)
         ).all()
         model_usage = {row[0]: row[1] for row in model_rows}
 
         # Length distribution: GROUP BY num_sentences
         length_rows = session.exec(
-            select(Summary.num_sentences, func.count()).where(
-                Summary.user_id == current_user.id
-            ).group_by(Summary.num_sentences)
+            select(Summary.num_sentences, func.count())
+            .where(Summary.user_id == current_user.id)
+            .group_by(Summary.num_sentences)
         ).all()
         length_distribution = {str(row[0]): row[1] for row in length_rows}
 
         # Average length
         avg_length = session.exec(
-            select(func.avg(Summary.num_sentences)).where(Summary.user_id == current_user.id)
+            select(func.avg(Summary.num_sentences)).where(
+                Summary.user_id == current_user.id
+            )
         ).one()
         average_length = float(avg_length) if avg_length else 0
 
         # Daily activity: GROUP BY date(created_at)
         daily_rows = session.exec(
-            select(func.date(Summary.created_at), func.count()).where(
-                Summary.user_id == current_user.id
-            ).group_by(func.date(Summary.created_at))
+            select(func.date(Summary.created_at), func.count())
+            .where(Summary.user_id == current_user.id)
+            .group_by(func.date(Summary.created_at))
         ).all()
         daily_activity = {str(row[0]): row[1] for row in daily_rows}
 
@@ -303,7 +348,9 @@ def list_summaries(
     engine = _get_engine(request)
     with get_session(engine) as session:
         total = session.exec(
-            select(func.count()).select_from(Summary).where(Summary.user_id == current_user.id)
+            select(func.count())
+            .select_from(Summary)
+            .where(Summary.user_id == current_user.id)
         ).one()
         rows = session.exec(
             select(Summary)
@@ -329,7 +376,9 @@ def list_summaries(
     )
 
 
-@router.get("/api/summaries/export", response_model=ExportSummariesResponse, tags=["summaries"])
+@router.get(
+    "/api/summaries/export", response_model=ExportSummariesResponse, tags=["summaries"]
+)
 def export_summaries(
     request: Request,
     current_user: User = Depends(get_current_user),
@@ -339,7 +388,9 @@ def export_summaries(
     engine = _get_engine(request)
     with get_session(engine) as session:
         total = session.exec(
-            select(func.count()).select_from(Summary).where(Summary.user_id == current_user.id)
+            select(func.count())
+            .select_from(Summary)
+            .where(Summary.user_id == current_user.id)
         ).one()
         rows = session.exec(
             select(Summary)
@@ -370,8 +421,14 @@ def export_summaries(
     )
 
 
-@router.get("/api/summaries/{summary_id}", response_model=SummaryDetailResponse, tags=["summaries"])
-def get_summary(summary_id: str, request: Request, current_user: User = Depends(get_current_user)) -> SummaryDetailResponse:
+@router.get(
+    "/api/summaries/{summary_id}",
+    response_model=SummaryDetailResponse,
+    tags=["summaries"],
+)
+def get_summary(
+    summary_id: str, request: Request, current_user: User = Depends(get_current_user)
+) -> SummaryDetailResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         row = session.get(Summary, summary_id)
@@ -390,8 +447,12 @@ def get_summary(summary_id: str, request: Request, current_user: User = Depends(
         )
 
 
-@router.delete("/api/summaries/{summary_id}", response_class=JSONResponse, tags=["summaries"])
-def delete_summary(summary_id: str, request: Request, current_user: User = Depends(get_current_user)) -> JSONResponse:
+@router.delete(
+    "/api/summaries/{summary_id}", response_class=JSONResponse, tags=["summaries"]
+)
+def delete_summary(
+    summary_id: str, request: Request, current_user: User = Depends(get_current_user)
+) -> JSONResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         row = session.get(Summary, summary_id)
@@ -403,7 +464,11 @@ def delete_summary(summary_id: str, request: Request, current_user: User = Depen
 
 
 @router.post("/api/summaries/import", response_class=JSONResponse, tags=["summaries"])
-def import_summaries(payload: list[dict], request: Request, current_user: User = Depends(get_current_user)) -> JSONResponse:
+def import_summaries(
+    payload: list[dict],
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> JSONResponse:
     engine = _get_engine(request)
     imported = 0
     with get_session(engine) as session:

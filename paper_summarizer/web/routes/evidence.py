@@ -32,7 +32,9 @@ router = APIRouter()
     response_model=EvidenceListResponse,
     tags=["evidence"],
 )
-def list_evidence(summary_id: str, request: Request, current_user: User = Depends(get_current_user)) -> EvidenceListResponse:
+def list_evidence(
+    summary_id: str, request: Request, current_user: User = Depends(get_current_user)
+) -> EvidenceListResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         summary = session.get(Summary, summary_id)
@@ -63,7 +65,10 @@ def list_evidence(summary_id: str, request: Request, current_user: User = Depend
     tags=["evidence"],
 )
 def create_evidence(
-    summary_id: str, payload: EvidenceCreate, request: Request, current_user: User = Depends(get_current_user)
+    summary_id: str,
+    payload: EvidenceCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
 ) -> EvidenceListResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
@@ -87,7 +92,11 @@ def create_evidence(
     tags=["evidence"],
 )
 def update_evidence(
-    summary_id: str, evidence_id: str, payload: EvidenceUpdate, request: Request, current_user: User = Depends(get_current_user)
+    summary_id: str,
+    evidence_id: str,
+    payload: EvidenceUpdate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
 ) -> EvidenceListResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
@@ -113,7 +122,12 @@ def update_evidence(
     response_model=EvidenceListResponse,
     tags=["evidence"],
 )
-def delete_evidence(summary_id: str, evidence_id: str, request: Request, current_user: User = Depends(get_current_user)) -> EvidenceListResponse:
+def delete_evidence(
+    summary_id: str,
+    evidence_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> EvidenceListResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         summary = session.get(Summary, summary_id)
@@ -132,7 +146,9 @@ def delete_evidence(summary_id: str, evidence_id: str, request: Request, current
     response_model=EvidenceListResponse,
     tags=["evidence"],
 )
-def generate_evidence(summary_id: str, request: Request, current_user: User = Depends(get_current_user)) -> EvidenceListResponse:
+def generate_evidence(
+    summary_id: str, request: Request, current_user: User = Depends(get_current_user)
+) -> EvidenceListResponse:
     engine = _get_engine(request)
     settings = _get_settings(request)
 
@@ -169,6 +185,7 @@ def _fetch_source_text(summary_row: Summary) -> str | None:
                 response = client.get(summary_row.source_value, follow_redirects=True)
                 response.raise_for_status()
             from bs4 import BeautifulSoup
+
             soup = BeautifulSoup(response.text, "html.parser")
             for tag in soup.find_all(["script", "style", "nav", "header", "footer"]):
                 tag.decompose()
@@ -177,7 +194,11 @@ def _fetch_source_text(summary_row: Summary) -> str | None:
                 return article.get_text(separator="\n", strip=True)
             paragraphs = soup.find_all("p")
             if paragraphs:
-                return "\n".join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 40)
+                return "\n".join(
+                    p.get_text(strip=True)
+                    for p in paragraphs
+                    if len(p.get_text(strip=True)) > 40
+                )
             return soup.get_text(separator="\n", strip=True)
         except Exception:
             return None
@@ -257,11 +278,15 @@ def _extract_evidence_llm(
     result = []
     for item in items[:10]:  # Cap at 10 evidence items
         if isinstance(item, dict) and "claim" in item and "evidence" in item:
-            result.append({
-                "claim": str(item["claim"])[:500],
-                "evidence": str(item["evidence"])[:1000],
-                "location": str(item["location"])[:200] if item.get("location") else None,
-            })
+            result.append(
+                {
+                    "claim": str(item["claim"])[:500],
+                    "evidence": str(item["evidence"])[:1000],
+                    "location": (
+                        str(item["location"])[:200] if item.get("location") else None
+                    ),
+                }
+            )
 
     if not result:
         raise ValueError("No valid evidence items parsed")
@@ -274,16 +299,22 @@ def _extract_evidence_heuristic(
     source_text: str | None,
 ) -> list[dict]:
     """Heuristic fallback: split summary into sentences and find matching source passages."""
-    sentences = [s.strip() + "." for s in summary_text.split(".") if len(s.strip()) > 20]
+    sentences = [
+        s.strip() + "." for s in summary_text.split(".") if len(s.strip()) > 20
+    ]
 
     result = []
     for sentence in sentences[:5]:  # Cap at 5
-        evidence = _find_supporting_passage(sentence, source_text) if source_text else None
-        result.append({
-            "claim": sentence,
-            "evidence": evidence or "No source text available for verification.",
-            "location": None,
-        })
+        evidence = (
+            _find_supporting_passage(sentence, source_text) if source_text else None
+        )
+        result.append(
+            {
+                "claim": sentence,
+                "evidence": evidence or "No source text available for verification.",
+                "location": None,
+            }
+        )
 
     return result
 
@@ -292,10 +323,23 @@ def _find_supporting_passage(claim: str, source_text: str) -> str | None:
     """Find the most relevant passage in source text for a given claim."""
     # Simple keyword overlap scoring
     claim_words = set(
-        w.lower() for w in claim.split()
-        if len(w) > 3 and w.lower() not in {
-            "that", "this", "with", "from", "have", "been",
-            "were", "also", "than", "more", "into", "their",
+        w.lower()
+        for w in claim.split()
+        if len(w) > 3
+        and w.lower()
+        not in {
+            "that",
+            "this",
+            "with",
+            "from",
+            "have",
+            "been",
+            "were",
+            "also",
+            "than",
+            "more",
+            "into",
+            "their",
         }
     )
 
@@ -303,7 +347,11 @@ def _find_supporting_passage(claim: str, source_text: str) -> str | None:
         return None
 
     # Split source into sentences
-    source_sentences = [s.strip() for s in source_text.replace("\n", " ").split(".") if len(s.strip()) > 20]
+    source_sentences = [
+        s.strip()
+        for s in source_text.replace("\n", " ").split(".")
+        if len(s.strip()) > 20
+    ]
 
     best_score = 0
     best_passage = None

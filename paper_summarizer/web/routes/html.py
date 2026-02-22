@@ -103,13 +103,19 @@ def get_models() -> JSONResponse:
     """Get available models."""
     settings = load_settings()
     summarizer = PaperSummarizer(
-        provider=ModelProvider.TOGETHER_AI if not settings.get("LOCAL_MODELS_ENABLED", True) else ModelProvider.LOCAL
+        provider=(
+            ModelProvider.TOGETHER_AI
+            if not settings.get("LOCAL_MODELS_ENABLED", True)
+            else ModelProvider.LOCAL
+        )
     )
     models = summarizer.get_available_models()
 
     grouped = {}
     for model in models:
-        if model["provider"] == ModelProvider.LOCAL.value and not settings.get("LOCAL_MODELS_ENABLED", True):
+        if model["provider"] == ModelProvider.LOCAL.value and not settings.get(
+            "LOCAL_MODELS_ENABLED", True
+        ):
             continue
         grouped.setdefault(model["provider"], []).append(
             {

@@ -16,8 +16,15 @@ from paper_summarizer.web.models import Summary, SummaryEvidence, User
 router = APIRouter()
 
 
-@router.get("/export/{summary_id}", response_class=PlainTextResponse, tags=["summaries"])
-def export_summary(summary_id: str, request: Request, format: str = "txt", current_user: User = Depends(get_current_user)) -> Response:
+@router.get(
+    "/export/{summary_id}", response_class=PlainTextResponse, tags=["summaries"]
+)
+def export_summary(
+    summary_id: str,
+    request: Request,
+    format: str = "txt",
+    current_user: User = Depends(get_current_user),
+) -> Response:
     engine = _get_engine(request)
     with get_session(engine) as session:
         row = session.get(Summary, summary_id)
@@ -87,7 +94,9 @@ def export_summary(summary_id: str, request: Request, format: str = "txt", curre
 
         pdf.save()
         buffer.seek(0)
-        headers = {"Content-Disposition": f'attachment; filename="summary_{summary_id}.pdf"'}
+        headers = {
+            "Content-Disposition": f'attachment; filename="summary_{summary_id}.pdf"'
+        }
         return Response(buffer.read(), media_type="application/pdf", headers=headers)
 
     filename = f"summary_{summary_id}.txt"

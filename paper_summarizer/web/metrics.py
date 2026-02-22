@@ -23,7 +23,9 @@ REQUEST_LATENCY = Histogram(
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, skip_paths: Iterable[str] = ("/metrics", "/static")) -> None:
+    def __init__(
+        self, app, skip_paths: Iterable[str] = ("/metrics", "/static")
+    ) -> None:
         super().__init__(app)
         self.skip_paths = tuple(skip_paths)
 

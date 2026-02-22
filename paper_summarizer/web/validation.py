@@ -57,7 +57,9 @@ def validate_upload(contents: bytes, filename: str, settings: dict[str, Any]) ->
         try:
             contents.decode("utf-8")
         except UnicodeDecodeError as exc:
-            raise HTTPException(status_code=400, detail="File must be UTF-8 text") from exc
+            raise HTTPException(
+                status_code=400, detail="File must be UTF-8 text"
+            ) from exc
 
 
 def validate_url(url: str) -> None:
@@ -91,15 +93,21 @@ def validate_url(url: str) -> None:
     try:
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(
-                socket.getaddrinfo, hostname, parsed.port or 443, type=socket.SOCK_STREAM,
+                socket.getaddrinfo,
+                hostname,
+                parsed.port or 443,
+                type=socket.SOCK_STREAM,
             )
             addr_info = future.result(timeout=_DNS_TIMEOUT_SECONDS)
     except FuturesTimeoutError as exc:
         raise HTTPException(
-            status_code=400, detail="URL host could not be resolved (DNS timeout)",
+            status_code=400,
+            detail="URL host could not be resolved (DNS timeout)",
         ) from exc
     except socket.gaierror as exc:
-        raise HTTPException(status_code=400, detail="URL host could not be resolved") from exc
+        raise HTTPException(
+            status_code=400, detail="URL host could not be resolved"
+        ) from exc
 
     for _, _, _, _, sockaddr in addr_info:
         if _is_private_ip(sockaddr[0]):

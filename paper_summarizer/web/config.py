@@ -36,9 +36,14 @@ DEFAULT_SETTINGS = {
     "DATABASE_URL": os.getenv("DATABASE_URL", "sqlite:///data/paper_summarizer.db"),
     "SECRET_KEY": _resolve_secret_key(),
     "ACCESS_TOKEN_EXPIRE_MINUTES": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")),
-    "AUTO_CREATE_DB": os.getenv("AUTO_CREATE_DB", "true" if APP_ENV != "production" else "false").lower() == "true",
+    "AUTO_CREATE_DB": os.getenv(
+        "AUTO_CREATE_DB", "true" if APP_ENV != "production" else "false"
+    ).lower()
+    == "true",
     "MAX_CONTENT_LENGTH": 16 * 1024 * 1024,
-    "STORAGE_LIMIT_BYTES": int(os.getenv("STORAGE_LIMIT_BYTES", str(1024 * 1024 * 1024))),
+    "STORAGE_LIMIT_BYTES": int(
+        os.getenv("STORAGE_LIMIT_BYTES", str(1024 * 1024 * 1024))
+    ),
     "ALLOWED_EXTENSIONS": {"txt", "pdf", "md", "rst"},
     "DEFAULT_MODEL": os.getenv("DEFAULT_MODEL", "t5-small"),
     "DEFAULT_PROVIDER": os.getenv("DEFAULT_PROVIDER", "local"),
@@ -52,7 +57,10 @@ DEFAULT_SETTINGS = {
     "REDIS_URL": os.getenv("REDIS_URL", ""),
     "SENTRY_DSN": os.getenv("SENTRY_DSN", ""),
     "METRICS_ENABLED": os.getenv("METRICS_ENABLED", "true").lower() == "true",
-    "LOCAL_MODELS_ENABLED": os.getenv("LOCAL_MODELS_ENABLED", "true" if APP_ENV != "production" else "false").lower() == "true",
+    "LOCAL_MODELS_ENABLED": os.getenv(
+        "LOCAL_MODELS_ENABLED", "true" if APP_ENV != "production" else "false"
+    ).lower()
+    == "true",
     "CORS_ALLOWED_ORIGINS": os.getenv("CORS_ALLOWED_ORIGINS", ""),
 }
 
@@ -75,9 +83,7 @@ def validate_settings(settings: dict) -> None:
         )
 
     if not settings.get("DATABASE_URL"):
-        raise ValueError(
-            "DATABASE_URL must be set in production (APP_ENV=production)."
-        )
+        raise ValueError("DATABASE_URL must be set in production (APP_ENV=production).")
 
     if settings.get("DEFAULT_PROVIDER") == "together_ai":
         if not os.getenv("TOGETHER_API_KEY"):

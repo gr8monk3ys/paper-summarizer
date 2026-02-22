@@ -4,6 +4,7 @@ Revision ID: 0003_add_foreign_keys
 Revises: 0002_jobs
 Create Date: 2026-02-17
 """
+
 from __future__ import annotations
 
 from alembic import op
@@ -35,9 +36,7 @@ def upgrade() -> None:
         )
 
     with op.batch_alter_table("summaryevidence") as batch_op:
-        batch_op.drop_constraint(
-            "fk_summaryevidence_summary_id", type_="foreignkey"
-        )
+        batch_op.drop_constraint("fk_summaryevidence_summary_id", type_="foreignkey")
         batch_op.create_foreign_key(
             "fk_summaryevidence_summary_id",
             "summary",
@@ -49,9 +48,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("summaryevidence") as batch_op:
-        batch_op.drop_constraint(
-            "fk_summaryevidence_summary_id", type_="foreignkey"
-        )
+        batch_op.drop_constraint("fk_summaryevidence_summary_id", type_="foreignkey")
         batch_op.create_foreign_key(
             "fk_summaryevidence_summary_id",
             "summary",

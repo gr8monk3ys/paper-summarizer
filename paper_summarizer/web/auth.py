@@ -61,13 +61,17 @@ def register(request: Request, payload: RegisterRequest) -> dict:
         existing = session.exec(select(User).where(User.email == payload.email)).first()
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
-        user = User(email=payload.email, hashed_password=hash_password(payload.password))
+        user = User(
+            email=payload.email, hashed_password=hash_password(payload.password)
+        )
         session.add(user)
         session.commit()
         session.refresh(user)
 
     settings = _get_settings(request)
-    token = create_access_token(user.id, settings["SECRET_KEY"], settings["ACCESS_TOKEN_EXPIRE_MINUTES"])
+    token = create_access_token(
+        user.id, settings["SECRET_KEY"], settings["ACCESS_TOKEN_EXPIRE_MINUTES"]
+    )
     return {"access_token": token, "token_type": "bearer"}
 
 
@@ -103,7 +107,9 @@ def login(request: Request, payload: LoginRequest) -> dict:
     login_attempt_tracker.reset(email)
 
     settings = _get_settings(request)
-    token = create_access_token(user.id, settings["SECRET_KEY"], settings["ACCESS_TOKEN_EXPIRE_MINUTES"])
+    token = create_access_token(
+        user.id, settings["SECRET_KEY"], settings["ACCESS_TOKEN_EXPIRE_MINUTES"]
+    )
     return {"access_token": token, "token_type": "bearer"}
 
 
