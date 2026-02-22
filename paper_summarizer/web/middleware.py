@@ -8,7 +8,9 @@ from starlette.responses import JSONResponse
 
 
 class MaxContentSizeMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_bytes: int, exempt_paths: tuple[str, ...] = ("/static",)) -> None:
+    def __init__(
+        self, app, max_bytes: int, exempt_paths: tuple[str, ...] = ("/static",)
+    ) -> None:
         super().__init__(app)
         self.max_bytes = max_bytes
         self.exempt_paths = exempt_paths
@@ -23,8 +25,12 @@ class MaxContentSizeMiddleware(BaseHTTPMiddleware):
             try:
                 length = int(content_length)
             except ValueError:
-                return JSONResponse({"error": "Invalid content length"}, status_code=400)
+                return JSONResponse(
+                    {"error": "Invalid content length"}, status_code=400
+                )
             if length > self.max_bytes:
-                return JSONResponse({"error": "Request body too large"}, status_code=413)
+                return JSONResponse(
+                    {"error": "Request body too large"}, status_code=413
+                )
 
         return await call_next(request)

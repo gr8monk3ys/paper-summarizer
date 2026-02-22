@@ -1,9 +1,10 @@
 """Initial schema.
 
 Revision ID: 0001_initial
-Revises: 
+Revises:
 Create Date: 2026-02-06
 """
+
 from __future__ import annotations
 
 from alembic import op
@@ -50,7 +51,9 @@ def upgrade() -> None:
         sa.Column("location", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
-    op.create_index("ix_summaryevidence_summary_id", "summaryevidence", ["summary_id"], unique=False)
+    op.create_index(
+        "ix_summaryevidence_summary_id", "summaryevidence", ["summary_id"], unique=False
+    )
 
 
 def downgrade() -> None:

@@ -32,10 +32,14 @@ def complete_job(
     session.commit()
 
 
-def resolve_summary_options(payload: Any, settings: dict[str, Any]) -> tuple[int, str, str, bool]:
+def resolve_summary_options(
+    payload: Any, settings: dict[str, Any]
+) -> tuple[int, str, str, bool]:
     """Resolve and validate summarization options from payload and settings."""
     if isinstance(payload, Mapping):
-        num_sentences = payload.get("num_sentences") or settings["DEFAULT_NUM_SENTENCES"]
+        num_sentences = (
+            payload.get("num_sentences") or settings["DEFAULT_NUM_SENTENCES"]
+        )
         model_type = payload.get("model_type") or settings["DEFAULT_MODEL"]
         provider = payload.get("provider") or settings["DEFAULT_PROVIDER"]
         keep_citations = bool(payload.get("keep_citations"))
@@ -45,10 +49,15 @@ def resolve_summary_options(payload: Any, settings: dict[str, Any]) -> tuple[int
         provider = payload.provider or settings["DEFAULT_PROVIDER"]
         keep_citations = bool(payload.keep_citations)
 
-    if provider == ModelProvider.LOCAL.value and not settings.get("LOCAL_MODELS_ENABLED", True):
+    if provider == ModelProvider.LOCAL.value and not settings.get(
+        "LOCAL_MODELS_ENABLED", True
+    ):
         raise ValueError("Local models are disabled")
 
-    if num_sentences < settings["MIN_SENTENCES"] or num_sentences > settings["MAX_SENTENCES"]:
+    if (
+        num_sentences < settings["MIN_SENTENCES"]
+        or num_sentences > settings["MAX_SENTENCES"]
+    ):
         raise ValueError(
             f'Number of sentences must be between {settings["MIN_SENTENCES"]} and {settings["MAX_SENTENCES"]}'
         )

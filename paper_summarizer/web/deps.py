@@ -35,4 +35,7 @@ def _get_engine(request: Request):
 
 
 def _allowed_file(filename: str, settings: dict[str, Any]) -> bool:
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in settings["ALLOWED_EXTENSIONS"]
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in settings["ALLOWED_EXTENSIONS"]
+    )

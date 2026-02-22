@@ -38,7 +38,9 @@ async def run_summary_job(ctx, job_id: str) -> None:
 
     try:
         source_type = payload.get("source_type")
-        num_sentences, model_type, provider, keep_citations = resolve_summary_options(payload, settings)
+        num_sentences, model_type, provider, keep_citations = resolve_summary_options(
+            payload, settings
+        )
 
         summarizer = PaperSummarizer(
             model_type=ModelType(model_type),
@@ -99,7 +101,9 @@ async def run_summary_job(ctx, job_id: str) -> None:
             if job:
                 complete_job(session, job, error=str(exc))
     except HTTPException as exc:
-        logger.error("Job %s failed with HTTP %s: %s", job_id, exc.status_code, exc.detail)
+        logger.error(
+            "Job %s failed with HTTP %s: %s", job_id, exc.status_code, exc.detail
+        )
         with get_session(engine) as session:
             job = session.get(Job, job_id)
             if job:

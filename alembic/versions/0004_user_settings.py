@@ -4,6 +4,7 @@ Revision ID: 0004_user_settings
 Revises: 0003_add_foreign_keys
 Create Date: 2026-02-18
 """
+
 from __future__ import annotations
 
 from alembic import op

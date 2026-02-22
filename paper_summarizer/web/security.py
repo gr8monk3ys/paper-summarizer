@@ -41,12 +41,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.headers.setdefault(
+            "Referrer-Policy", "strict-origin-when-cross-origin"
+        )
+        response.headers.setdefault(
+            "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
+        )
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
         if self.app_env == "production":
-            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains; preload",
+            )
         return response
 
 
@@ -78,7 +85,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app, exempt_paths: tuple[str, ...] | None = None) -> None:
         super().__init__(app)
-        self.exempt_paths = exempt_paths if exempt_paths is not None else self._DEFAULT_EXEMPT_PATHS
+        self.exempt_paths = (
+            exempt_paths if exempt_paths is not None else self._DEFAULT_EXEMPT_PATHS
+        )
 
     async def dispatch(self, request: Request, call_next):
         if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
@@ -97,5 +106,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                             request_netloc,
                             path,
                         )
-                        return JSONResponse({"error": "Invalid origin"}, status_code=403)
+                        return JSONResponse(
+                            {"error": "Invalid origin"}, status_code=403
+                        )
         return await call_next(request)

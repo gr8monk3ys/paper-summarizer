@@ -89,7 +89,9 @@ class RedisBackend:
                 )
                 self._redis.ping()
             except _redis_exception_types():
-                logger.warning("Redis rate-limit backend unavailable, connection failed")
+                logger.warning(
+                    "Redis rate-limit backend unavailable, connection failed"
+                )
                 self._redis = None
         return self._redis
 
@@ -115,7 +117,9 @@ class RedisBackend:
             # Fail closed: deny requests when rate limiting is degraded.
             # It is safer to reject some legitimate traffic than to allow
             # unbounded requests that could overwhelm downstream services.
-            logger.warning("Redis rate-limit check failed, denying request (fail-closed)")
+            logger.warning(
+                "Redis rate-limit check failed, denying request (fail-closed)"
+            )
             return False
 
 
@@ -161,9 +165,7 @@ class LoginAttemptTracker:
     attempts for that email are blocked until the window expires.
     """
 
-    def __init__(
-        self, max_attempts: int = 5, window_seconds: int = 900
-    ) -> None:
+    def __init__(self, max_attempts: int = 5, window_seconds: int = 900) -> None:
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
         self._attempts: DefaultDict[str, Deque[float]] = defaultdict(deque)
@@ -172,7 +174,8 @@ class LoginAttemptTracker:
     def _cleanup(self) -> None:
         now = time.monotonic()
         stale = [
-            k for k, v in self._attempts.items()
+            k
+            for k, v in self._attempts.items()
             if not v or v[-1] < now - self.window_seconds
         ]
         for k in stale:
@@ -205,9 +208,14 @@ login_attempt_tracker = LoginAttemptTracker()
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, limiter: RateLimiter, exempt_paths: tuple[str, ...] = ("/static",),
-                 auth_limiter: RateLimiter | None = None,
-                 auth_paths: tuple[str, ...] = ("/auth/login", "/auth/register")) -> None:
+    def __init__(
+        self,
+        app,
+        limiter: RateLimiter,
+        exempt_paths: tuple[str, ...] = ("/static",),
+        auth_limiter: RateLimiter | None = None,
+        auth_paths: tuple[str, ...] = ("/auth/login", "/auth/register"),
+    ) -> None:
         super().__init__(app)
         self.limiter = limiter
         self.exempt_paths = exempt_paths

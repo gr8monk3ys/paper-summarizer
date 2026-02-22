@@ -10,22 +10,31 @@ from typing import Optional, List, Dict, Any
 
 import together
 
+
 class ModelType(Enum):
     """Available model types."""
-    T5_SMALL = 't5-small'
-    DEEPSEEK_R1 = 'deepseek-r1'
+
+    T5_SMALL = "t5-small"
+    DEEPSEEK_R1 = "deepseek-r1"
+
 
 class ModelProvider(Enum):
     """Available model providers."""
-    LOCAL = 'local'
-    TOGETHER_AI = 'together_ai'
+
+    LOCAL = "local"
+    TOGETHER_AI = "together_ai"
+
 
 class PaperSummarizer:
     """Paper summarizer class."""
 
-    def __init__(self, model_type: ModelType = ModelType.T5_SMALL, provider: ModelProvider = ModelProvider.LOCAL):
+    def __init__(
+        self,
+        model_type: ModelType = ModelType.T5_SMALL,
+        provider: ModelProvider = ModelProvider.LOCAL,
+    ):
         """Initialize the summarizer.
-        
+
         Args:
             model_type: Type of model to use for summarization
             provider: Provider of the model (local or Together AI)
@@ -33,19 +42,22 @@ class PaperSummarizer:
         self.model_type = model_type
         self.provider = provider
         self.logger = logging.getLogger(__name__)
-        
+
         # Set up API key for Together AI if needed
         if provider == ModelProvider.TOGETHER_AI:
-            api_key = os.getenv('TOGETHER_API_KEY')
-            if not api_key and not os.getenv('TESTING'):
-                raise ValueError("Together AI API key not found. Please set TOGETHER_API_KEY environment variable.")
+            api_key = os.getenv("TOGETHER_API_KEY")
+            if not api_key and not os.getenv("TESTING"):
+                raise ValueError(
+                    "Together AI API key not found. Please set TOGETHER_API_KEY environment variable."
+                )
             together.api_key = api_key
 
         # Initialize local model if using local provider
         if provider == ModelProvider.LOCAL:
             try:
                 from transformers import pipeline
-                self.model = pipeline('summarization', model=model_type.value)
+
+                self.model = pipeline("summarization", model=model_type.value)
             except ImportError as e:
                 self.logger.error(f"Failed to initialize local model: {str(e)}")
                 raise ValueError(f"Failed to initialize local model: {str(e)}")
@@ -53,17 +65,19 @@ class PaperSummarizer:
                 self.logger.error(f"Failed to initialize local model: {str(e)}")
                 raise ValueError(f"Failed to initialize local model: {str(e)}")
 
-    def summarize(self, text: str, num_sentences: int = 5, keep_citations: bool = True) -> str:
+    def summarize(
+        self, text: str, num_sentences: int = 5, keep_citations: bool = True
+    ) -> str:
         """Summarize the given text.
-        
+
         Args:
             text: Text to summarize
             num_sentences: Number of sentences in the summary
             keep_citations: Whether to keep citations in the summary
-            
+
         Returns:
             Summarized text
-            
+
         Raises:
             ValueError: If text is empty or summarization fails
         """
@@ -94,14 +108,14 @@ class PaperSummarizer:
 
     def summarize_from_url(self, url: str, num_sentences: int = 5) -> str:
         """Summarize text from a URL.
-        
+
         Args:
             url: URL to fetch text from
             num_sentences: Number of sentences in the summary
-            
+
         Returns:
             Summarized text
-            
+
         Raises:
             ValueError: If URL is invalid or content cannot be fetched
         """
@@ -134,17 +148,19 @@ class PaperSummarizer:
         except ValueError:
             raise
 
-    def summarize_from_file(self, file_path: str, num_sentences: int = 5, keep_citations: bool = True) -> str:
+    def summarize_from_file(
+        self, file_path: str, num_sentences: int = 5, keep_citations: bool = True
+    ) -> str:
         """Summarize text from a file.
-        
+
         Args:
             file_path: Path to the file
             num_sentences: Number of sentences in the summary
             keep_citations: Whether to keep citations in the summary
-            
+
         Returns:
             Summarized text
-            
+
         Raises:
             ValueError: If file format is unsupported or file cannot be read
             FileNotFoundError: If file does not exist
@@ -154,10 +170,10 @@ class PaperSummarizer:
             if not path.exists():
                 raise FileNotFoundError(f"File not found: {file_path}")
 
-            if path.suffix.lower() == '.pdf':
+            if path.suffix.lower() == ".pdf":
                 text = self._extract_text_from_pdf(file_path)
-            elif path.suffix.lower() in ['.txt', '.md', '.rst']:
-                with open(file_path, 'r', encoding='utf-8') as f:
+            elif path.suffix.lower() in [".txt", ".md", ".rst"]:
+                with open(file_path, "r", encoding="utf-8") as f:
                     text = f.read()
             else:
                 raise ValueError(f"Unsupported file format: {path.suffix}")
@@ -217,8 +233,10 @@ class PaperSummarizer:
         try:
             max_length = min(num_sentences * 40, 512)
             min_length = min(num_sentences * 15, max_length - 10)
-            result = self.model(text, max_length=max_length, min_length=min_length, do_sample=False)
-            return result[0]['summary_text']
+            result = self.model(
+                text, max_length=max_length, min_length=min_length, do_sample=False
+            )
+            return result[0]["summary_text"]
         except (RuntimeError, IndexError, TypeError) as e:
             raise ValueError(f"Local summarization failed: {str(e)}")
 
@@ -257,7 +275,7 @@ class PaperSummarizer:
                 temperature=0.2,
                 stop=["\n\n"],
             )
-            return response['output']['choices'][0]['text'].strip()
+            return response["output"]["choices"][0]["text"].strip()
         except httpx.HTTPError as e:
             raise ValueError(f"Together AI summarization failed: {str(e)}")
         except (RuntimeError, KeyError, TypeError, IndexError) as e:
@@ -270,7 +288,9 @@ class PaperSummarizer:
         soup = BeautifulSoup(html, "html.parser")
 
         # Remove non-content elements
-        for tag in soup.find_all(["script", "style", "nav", "header", "footer", "aside", "form"]):
+        for tag in soup.find_all(
+            ["script", "style", "nav", "header", "footer", "aside", "form"]
+        ):
             tag.decompose()
 
         # Try to find article/main content first
@@ -281,7 +301,11 @@ class PaperSummarizer:
         # Fallback: get all paragraph text
         paragraphs = soup.find_all("p")
         if paragraphs:
-            return "\n".join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 40)
+            return "\n".join(
+                p.get_text(strip=True)
+                for p in paragraphs
+                if len(p.get_text(strip=True)) > 40
+            )
 
         return soup.get_text(separator="\n", strip=True)
 
@@ -320,39 +344,42 @@ class PaperSummarizer:
 
     def _remove_citations(self, text: str) -> str:
         """Remove citations from text.
-        
+
         Args:
             text: Text to remove citations from
-            
+
         Returns:
             Text with citations removed
         """
         import re
+
         # Remove citations in brackets [1] or [1,2,3]
-        text = re.sub(r'\[[0-9,\s]+\]', '', text)
+        text = re.sub(r"\[[0-9,\s]+\]", "", text)
         # Remove citations in parentheses (Author, Year)
-        text = re.sub(r'\([A-Za-z\s]+,\s*\d{4}\)', '', text)
+        text = re.sub(r"\([A-Za-z\s]+,\s*\d{4}\)", "", text)
         # Remove citations in parentheses (Author et al., Year)
-        text = re.sub(r'\([A-Za-z\s]+et al\.,\s*\d{4}\)', '', text)
+        text = re.sub(r"\([A-Za-z\s]+et al\.,\s*\d{4}\)", "", text)
         # Remove author names at start of sentence
-        text = re.sub(r'[A-Za-z\s]+et al\.\s+', '', text)
-        text = re.sub(r'[A-Za-z\s]+\(\d{4}\)\s+', '', text)
+        text = re.sub(r"[A-Za-z\s]+et al\.\s+", "", text)
+        text = re.sub(r"[A-Za-z\s]+\(\d{4}\)\s+", "", text)
         # Clean up extra whitespace
-        text = ' '.join(text.split())
+        text = " ".join(text.split())
         return text
 
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Get list of available models.
-        
+
         Returns:
             List of available models with their details
         """
         models = []
         for model_type in ModelType:
             for provider in ModelProvider:
-                models.append({
-                    'name': model_type.value,
-                    'provider': provider.value,
-                    'description': f"{model_type.value} model from {provider.value}"
-                })
+                models.append(
+                    {
+                        "name": model_type.value,
+                        "provider": provider.value,
+                        "description": f"{model_type.value} model from {provider.value}",
+                    }
+                )
         return models

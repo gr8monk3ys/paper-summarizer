@@ -46,8 +46,6 @@ class SummaryListResponse(BaseModel):
     offset: int
 
 
-
-
 class ExportSummaryItem(BaseModel):
     id: str
     title: Optional[str]
@@ -65,6 +63,7 @@ class ExportSummariesResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
 
 class SummaryDetailResponse(BaseModel):
     id: str
@@ -103,8 +102,6 @@ class EvidenceListResponse(BaseModel):
     items: list[EvidenceItem]
 
 
-
-
 class UserSettingsResponse(BaseModel):
     defaultModel: str
     summaryLength: int
@@ -124,6 +121,7 @@ class StorageUsageResponse(BaseModel):
     maxBytes: int
     usedPercent: int
     summaryCount: int
+
 
 class SynthesisRequest(BaseModel):
     summary_ids: list[str]

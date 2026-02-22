@@ -28,8 +28,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/api/summaries/synthesize", response_model=SynthesisResponse, tags=["summaries"])
-def synthesize_summaries(payload: SynthesisRequest, request: Request, current_user: User = Depends(get_current_user)) -> SynthesisResponse:
+@router.post(
+    "/api/summaries/synthesize", response_model=SynthesisResponse, tags=["summaries"]
+)
+def synthesize_summaries(
+    payload: SynthesisRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> SynthesisResponse:
     engine = _get_engine(request)
     with get_session(engine) as session:
         rows = session.exec(
@@ -138,14 +144,41 @@ def _synthesize_heuristic(rows: list[Summary]) -> SynthesisResponse:
     # Find overlapping themes via shared vocabulary
     paper_keywords: list[set[str]] = []
     stopwords = {
-        "the", "and", "for", "with", "that", "this", "from", "are",
-        "was", "were", "have", "has", "had", "into", "been", "also",
-        "their", "they", "these", "those", "which", "about", "would",
-        "could", "using", "used", "more", "than", "between", "such",
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "are",
+        "was",
+        "were",
+        "have",
+        "has",
+        "had",
+        "into",
+        "been",
+        "also",
+        "their",
+        "they",
+        "these",
+        "those",
+        "which",
+        "about",
+        "would",
+        "could",
+        "using",
+        "used",
+        "more",
+        "than",
+        "between",
+        "such",
     }
     for row in rows:
         words = set(
-            w.lower() for w in row.summary.split()
+            w.lower()
+            for w in row.summary.split()
             if len(w) > 3 and w.lower() not in stopwords
         )
         paper_keywords.append(words)
@@ -159,9 +192,7 @@ def _synthesize_heuristic(rows: list[Summary]) -> SynthesisResponse:
         threshold = max(2, len(rows) // 2)
         common = [w for w, c in all_words.most_common(10) if c >= threshold]
         if common:
-            consensus_parts.append(
-                f"**Shared themes**: {', '.join(common)}"
-            )
+            consensus_parts.append(f"**Shared themes**: {', '.join(common)}")
 
     consensus = "\n".join(consensus_parts)
 
@@ -205,8 +236,14 @@ def _synthesize_heuristic(rows: list[Summary]) -> SynthesisResponse:
     )
 
 
-@router.get("/api/summaries/synthesize/export", response_class=PlainTextResponse, tags=["summaries"])
-def export_synthesis(consensus: str, format: str = "txt", current_user: User = Depends(get_current_user)) -> PlainTextResponse:
+@router.get(
+    "/api/summaries/synthesize/export",
+    response_class=PlainTextResponse,
+    tags=["summaries"],
+)
+def export_synthesis(
+    consensus: str, format: str = "txt", current_user: User = Depends(get_current_user)
+) -> PlainTextResponse:
     if format == "md":
         content = f"# Synthesis Output\n\n{consensus}"
         filename = "synthesis.md"

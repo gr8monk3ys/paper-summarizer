@@ -7,7 +7,16 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 
@@ -33,6 +42,7 @@ _MAX_BATCH_FILES = 20
 
 router = APIRouter()
 
+
 def _run_summary_job(
     job_id: str,
     settings: dict[str, Any],
@@ -49,7 +59,9 @@ def _run_summary_job(
         session.commit()
 
     try:
-        num_sentences, model_type, provider, keep_citations = resolve_summary_options(payload, settings)
+        num_sentences, model_type, provider, keep_citations = resolve_summary_options(
+            payload, settings
+        )
 
         summarizer = PaperSummarizer(
             model_type=ModelType(model_type),
@@ -66,7 +78,11 @@ def _run_summary_job(
             if not payload.text:
                 raise ValueError("Text is required")
             summary = summarizer.summarize(payload.text, num_sentences, keep_citations)
-            title = payload.text.strip().splitlines()[0][:80] if payload.text.strip() else None
+            title = (
+                payload.text.strip().splitlines()[0][:80]
+                if payload.text.strip()
+                else None
+            )
         else:
             raise ValueError("Unsupported source type for background jobs")
 
@@ -112,7 +128,9 @@ async def create_summary_job(
     current_user: User = Depends(get_current_user),
 ) -> JobCreateResponse:
     if payload.source_type not in {"url", "text"}:
-        raise HTTPException(status_code=400, detail="Unsupported source type for background jobs")
+        raise HTTPException(
+            status_code=400, detail="Unsupported source type for background jobs"
+        )
 
     settings = _get_settings(request)
     engine = _get_engine(request)
@@ -132,7 +150,10 @@ async def create_summary_job(
         try:
             await redis.enqueue_job("run_summary_job", job.id)
         except Exception:
-            logger.exception("Failed to enqueue job %s to Redis, falling back to background task", job.id)
+            logger.exception(
+                "Failed to enqueue job %s to Redis, falling back to background task",
+                job.id,
+            )
             background_tasks.add_task(
                 _run_summary_job,
                 job.id,
@@ -196,7 +217,9 @@ async def process_batch(
     model_type = model_type or settings["DEFAULT_MODEL"]
     provider = provider or settings["DEFAULT_PROVIDER"]
     keep_citations_flag = keep_citations.lower() == "true"
-    if provider == ModelProvider.LOCAL.value and not settings.get("LOCAL_MODELS_ENABLED", True):
+    if provider == ModelProvider.LOCAL.value and not settings.get(
+        "LOCAL_MODELS_ENABLED", True
+    ):
         raise HTTPException(status_code=400, detail="Local models are disabled")
 
     if not files:
@@ -230,7 +253,9 @@ async def process_batch(
         validate_upload(contents, filename, settings)
         filepath.write_bytes(contents)
         try:
-            summary = summarizer.summarize_from_file(str(filepath), num_sentences, keep_citations_flag)
+            summary = summarizer.summarize_from_file(
+                str(filepath), num_sentences, keep_citations_flag
+            )
             if summary:
                 summary_record = Summary(
                     user_id=current_user.id,
