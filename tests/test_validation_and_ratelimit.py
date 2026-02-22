@@ -23,6 +23,7 @@ from paper_summarizer.web.validation import validate_upload, validate_url
 # validate_upload tests
 # ---------------------------------------------------------------------------
 
+
 class TestValidateUpload:
     """Tests for the validate_upload function."""
 
@@ -64,6 +65,7 @@ class TestValidateUpload:
 # validate_url tests
 # ---------------------------------------------------------------------------
 
+
 def _public_addrinfo(host: str = "93.184.216.34", port: int = 443):
     """Return a fake getaddrinfo result pointing to a public IP."""
     return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (host, port))]
@@ -72,7 +74,10 @@ def _public_addrinfo(host: str = "93.184.216.34", port: int = 443):
 class TestValidateUrl:
     """Tests for the validate_url function."""
 
-    @patch("paper_summarizer.web.validation.socket.getaddrinfo", return_value=_public_addrinfo())
+    @patch(
+        "paper_summarizer.web.validation.socket.getaddrinfo",
+        return_value=_public_addrinfo(),
+    )
     def test_valid_https_url(self, mock_gai):
         validate_url("https://example.com/paper.pdf")
         mock_gai.assert_called_once()
@@ -132,26 +137,39 @@ class TestValidateUrl:
 # InMemoryBackend tests
 # ---------------------------------------------------------------------------
 
+
 class TestInMemoryBackend:
     """Tests for the InMemoryBackend rate limiter."""
 
     def test_allows_requests_within_limit(self):
         backend = InMemoryBackend()
         for _ in range(5):
-            assert asyncio.run(backend.allow("client1", max_requests=5, window_seconds=60)) is True
+            assert (
+                asyncio.run(backend.allow("client1", max_requests=5, window_seconds=60))
+                is True
+            )
 
     def test_blocks_when_limit_exceeded(self):
         backend = InMemoryBackend()
         for _ in range(3):
             asyncio.run(backend.allow("client1", max_requests=3, window_seconds=60))
-        assert asyncio.run(backend.allow("client1", max_requests=3, window_seconds=60)) is False
+        assert (
+            asyncio.run(backend.allow("client1", max_requests=3, window_seconds=60))
+            is False
+        )
 
     def test_window_expiry(self):
         backend = InMemoryBackend()
         # Fill up the bucket
         for _ in range(2):
-            assert asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1)) is True
-        assert asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1)) is False
+            assert (
+                asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1))
+                is True
+            )
+        assert (
+            asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1))
+            is False
+        )
 
         # Patch time.monotonic to simulate passage of time beyond the window
         original_monotonic = time.monotonic
@@ -160,21 +178,34 @@ class TestInMemoryBackend:
         def patched_monotonic():
             return original_monotonic() + offset
 
-        with patch("paper_summarizer.web.ratelimit.time.monotonic", side_effect=patched_monotonic):
+        with patch(
+            "paper_summarizer.web.ratelimit.time.monotonic",
+            side_effect=patched_monotonic,
+        ):
             offset = 2.0  # Jump forward 2 seconds (past the 1-second window)
-            assert asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1)) is True
+            assert (
+                asyncio.run(backend.allow("client1", max_requests=2, window_seconds=1))
+                is True
+            )
 
     def test_separate_keys_are_independent(self):
         backend = InMemoryBackend()
-        assert asyncio.run(backend.allow("a", max_requests=1, window_seconds=60)) is True
-        assert asyncio.run(backend.allow("a", max_requests=1, window_seconds=60)) is False
+        assert (
+            asyncio.run(backend.allow("a", max_requests=1, window_seconds=60)) is True
+        )
+        assert (
+            asyncio.run(backend.allow("a", max_requests=1, window_seconds=60)) is False
+        )
         # Different key should still be allowed
-        assert asyncio.run(backend.allow("b", max_requests=1, window_seconds=60)) is True
+        assert (
+            asyncio.run(backend.allow("b", max_requests=1, window_seconds=60)) is True
+        )
 
 
 # ---------------------------------------------------------------------------
 # RedisBackend tests (mocked)
 # ---------------------------------------------------------------------------
+
 
 class TestRedisBackend:
     """Tests for the RedisBackend with mocked Redis."""
@@ -227,6 +258,7 @@ class TestRedisBackend:
 # ---------------------------------------------------------------------------
 # RateLimiter tests
 # ---------------------------------------------------------------------------
+
 
 class TestRateLimiter:
     """Tests for the RateLimiter wrapper."""

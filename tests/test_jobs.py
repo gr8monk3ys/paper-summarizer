@@ -53,7 +53,9 @@ class TestCreateSummaryJob:
             "model_type": ModelType.T5_SMALL.value,
             "provider": ModelProvider.LOCAL.value,
         }
-        response = client.post("/api/jobs/summarize", json=payload, headers=auth_headers)
+        response = client.post(
+            "/api/jobs/summarize", json=payload, headers=auth_headers
+        )
         assert response.status_code == 200
         data = response.json()
         assert "job_id" in data
@@ -69,7 +71,9 @@ class TestCreateSummaryJob:
             "provider": ModelProvider.LOCAL.value,
         }
         with patch("paper_summarizer.web.routes.jobs.validate_url"):
-            response = client.post("/api/jobs/summarize", json=payload, headers=auth_headers)
+            response = client.post(
+                "/api/jobs/summarize", json=payload, headers=auth_headers
+            )
         assert response.status_code == 200
         data = response.json()
         assert "job_id" in data
@@ -81,7 +85,9 @@ class TestCreateSummaryJob:
             "source_type": "file",
             "text": TEST_DATA["sample_text"],
         }
-        response = client.post("/api/jobs/summarize", json=payload, headers=auth_headers)
+        response = client.post(
+            "/api/jobs/summarize", json=payload, headers=auth_headers
+        )
         assert response.status_code == 400
         data = response.json()
         assert "error" in data
@@ -111,7 +117,9 @@ class TestGetJobStatus:
             "source_type": "text",
             "text": TEST_DATA["sample_text"],
         }
-        create_resp = client.post("/api/jobs/summarize", json=payload, headers=auth_headers)
+        create_resp = client.post(
+            "/api/jobs/summarize", json=payload, headers=auth_headers
+        )
         assert create_resp.status_code == 200
         job_id = create_resp.json()["job_id"]
 
@@ -218,7 +226,9 @@ class TestRunSummaryJob:
             assert updated.error == "boom"
             assert updated.completed_at is not None
 
-    def test_nonexistent_job_early_return(self, app, client, auth_headers, mock_summarizer):
+    def test_nonexistent_job_early_return(
+        self, app, client, auth_headers, mock_summarizer
+    ):
         """_run_summary_job returns early when the job id does not exist."""
         engine = _get_engine_from_app(app)
         settings = _get_settings_from_app(app)
