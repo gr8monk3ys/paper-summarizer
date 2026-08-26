@@ -1,24 +1,30 @@
 # Paper Summarizer
 
+> **Status: archived (2026-06) — no longer maintained, kept as a reference.**
+> There is no hosted instance. The Docker/Railway/Grafana files and the Together AI
+> integration are left as they were and are not verified against current versions
+> of those services. Dependabot and scheduled CI are disabled; the test suite still
+> passes locally (`uv run pytest`).
+
 ![Dashboard](public/images/dashboard.png)
 
-A modern web application that helps researchers and students quickly summarize academic papers using advanced language models. Built with FastAPI and Together AI, it provides an intuitive interface for summarizing papers from text, URLs, or file uploads.
+A FastAPI web app that summarizes academic papers with an LLM (T5-small locally or DeepSeek-R1 via Together AI). Input can be pasted text, a URL, or an uploaded file.
 
 ## Features
 
 - **Multiple Input Methods**: 
   - Direct text input
   - URL scraping
-  - File upload (supports .txt, .md, .rst)
+  - File upload (supports .txt, .pdf, .md, .rst)
   - Batch processing for multiple files
 
-- **Advanced Summarization**:
+- **Summarization**:
   - Choice of language models (T5-Small, DeepSeek-R1)
   - Local or Together AI processing
   - Configurable summary length
   - Optional citation handling
 
-- **Modern Interface**:
+- **Interface**:
   - Clean, responsive design with Tailwind CSS
   - Real-time processing feedback
   - Error handling and validation
@@ -158,11 +164,7 @@ Grafana runs on `http://localhost:3000` (admin/admin by default).
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+The repo is archived, so pull requests are not accepted. Fork it if you want to build on it.
 
 ## License
 
