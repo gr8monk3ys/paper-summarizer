@@ -17,3 +17,5 @@ htmlcov/
 dist/
 build/
 run.bat
+.claude/settings.local.json
+node_modules/
